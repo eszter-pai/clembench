@@ -1,0 +1,12 @@
+easy-guided
+easy-unguided
+hard-guided
+hard-unguided
+legendary-guided
+legendary-unguided
+magic-only-guided
+magic-only-unguided
+melee-only-guided
+melee-only-unguided
+balanced-guided
+balanced-unguided
