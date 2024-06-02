@@ -1,3 +1,4 @@
+import copy
 from typing import List, Dict, Tuple
 
 import clemgame.metrics as ms
@@ -22,8 +23,6 @@ class DND(GameMaster):
         self.model_c = player_backends[2]
         self.cls = ["Wizard", "Sorcerer", "Cleric", "Fighter", "Rogue", "Ranger"]
 
-
-        
         # initialise attributes that will be used for the evaluation scores
         self.max_turn = 15
         self.aborted: bool = False
@@ -32,6 +31,8 @@ class DND(GameMaster):
 
 
     def set_up(self, **game_instance):
+
+        self.game_instance = game_instance # fetch game parameters here
 
         #instantiate players
         self.player_a = Hero()
@@ -74,9 +75,13 @@ class DND(GameMaster):
     def play(self) -> None:
         while self.does_game_proceed():
             self.current_turn += 1
+            self.log_next_turn()
+            self.turn()
+        if self.complete_turns == self.n_turns:
+            # log a message informing that the game was successfuly played
+            action = {'type': 'info', 'content': 'game successful'}
+            self.log_event(from_='GM', to='GM', action=action)
         
-        
-
         return None
 
 
@@ -88,7 +93,64 @@ class DND(GameMaster):
             return False
         
 
-    def _check_validity(self, answer: str) -> bool:             
+    def get_utterance(self, player -> str):
+        assert player in ('a', 'b')
+        if player == 'a':            
+
+            #API call (or get a programmatic response) from player a
+            prompt_a, raw_answer_a, answer_a = self.player_a(self.player_a.history,
+                                                    self.current_turn)
+            #API call to the records
+            action = {'type': 'get message', 'content': answer_a}
+            self.log_event(from_='Player 1', to='GM', action=action,
+                        call=(copy.deepcopy(prompt_a), raw_answer_a))
+            
+            #reply to its own memory
+
+
+        if player == 'b':
+
+            #API call (or get a programmatic response) from player a
+            prompt_b, raw_answer_b, answer_b = self.player_b(self.player_b.history,
+                                                    self.current_turn)
+            #API call to the records
+            action = {'type': 'get message', 'content': answer_b}
+            self.log_event(from_='Player 1', to='GM', action=action,
+                        call=(copy.deepcopy(prompt_b), raw_answer_b))
+            
+            #reply to its own memory
+
+
+        else:
+            #for dm
+            #API call (or get a programmatic response) from player a
+            prompt, raw_answer, answer = self.player_a(self.player_a.history,
+                                                    self.current_turn)
+            #API call to the records
+            action = {'type': 'get message', 'content': answer}
+            self.log_event(from_='Player 1', to='GM', action=action,
+                        call=(copy.deepcopy(prompt), raw_answer))
+            
+            #reply to its own memory
+            
+
+    def _check_validity(self, answer: str) -> bool:
+
+
+    def turn(self) -> None:
+        #get A, B, and DM's response
+        answer_a = self._get_utterance('a')
+        answer_a = self._get_utterance('b')
+        answer_a = self._get_utterance('dm')
+
+        #check A's response's validity
+        is_valid_turn = self._check_validity(answer_a)
+        if not is_valid_turn:
+            # stop game
+            return None
+        
+        #also add the reply to the transcript
+        
 
 
 
