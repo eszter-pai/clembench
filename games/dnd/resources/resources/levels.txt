@@ -1,0 +1,27 @@
+<<<<<<< HEAD
+easy-guided
+easy-unguided
+hard-guided
+hard-unguided
+legendary-guided
+legendary-unguided
+magic-only-guided
+magic-only-unguided
+melee-only-guided
+melee-only-unguided
+balanced-guided
+balanced-unguided
+=======
+easy-guided
+easy-unguided
+hard-guided
+hard-unguided
+legendary-guided
+legendary-unguided
+magic-only-guided
+magic-only-unguided
+melee-only-guided
+melee-only-unguided
+balanced-guided
+balanced-unguided
+>>>>>>> 048d8234316d463ab5506eec071485b751555db3

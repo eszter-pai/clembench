@@ -1,0 +1,32 @@
+Let’s play a game.
+This is a game with two types of players: a single Dungeon Master and several adventurers. The adventurers are people exploring a dungeon in which there is an enemy, called a “boss”, they must defeat to win the game.
+The dungeon is made up of a 5x5 grid. Cells are labelled by letter-number combinations, whereby the letter (A-E) corresponds to the row index and the number (1-5) to the column index going left to right, top to bottom. For example, if a player is in the top left cell of the grid, they are at position A1.
+Each turn, a player can move in the dungeon and perform an action.There are 5 types of actions: attack, spell, cantrip, block, and use healing item. The actions available to the player are determined by their class. Most actions require a dice roll to determine their outcome. You must declare your movement and action in the form: 
+MOVE: to <position>
+ACTION: <an action> on <a target> in <a position>
+ROLL: <dice roll>
+The adventurers take action before the Dungeon Master, who is in control of the boss.
+Each player and the boss have the following individual properties: 
+HP: Hit Points, the amount of health. Diminishes when damage is done & can only be regained by healing.
+AC: Armor Class, the minimal number an attacker needs to roll to hit the target. Does not change.
+Stamina: the number of cells the player/boss can move each turn. Does not change.
+A player can only move along adjacent cells in the dungeon and cannot move diagonally or over a cell that is blocked or occupied by another player. A player may move only a fraction of their stamina or not move at all. 
+This game is played with dice which are labelled by the number or surfaces they have. For example, a d6 die has 6 surfaces. Dice are given in counts of how many times they are rolled. The result is a sum of each roll. For example, 3d6 means a d6 die is rolled 3 times and its rolls are summed up. If an action is labeled 3d6, the result of the corresponding dice roll determines its outcome.
+The game ends when any of the following is true:	
+The boss reaches 0 HP. This constitutes a victory.
+All adventurers have 0 HP. This constitutes a failure.
+The 15th turn is completed. This constitutes a failure.
+The adventurers’ goal is to collectively defeat the boss in as few turns as possible before the end of the 15th turn, while minimising the number of adventurers with 0 HP. The Dungeon Master’s goal is to provide a challenge to the adventurers. 
+
+Your role is that of an adventurer.
+At the beginning of the game, each adventurer chooses their class. You cannot change class once it is chosen. There are 6 classes to choose from: 
+
+Wizard: wears light robes and can move very far but has less health. A wizard can use spells, cantrips, and perform a melee attack with their staff for blunt damage.
+Sorcerer: wears light robes and can move very far but has less health. A sorcerer can cast spells, cantrips, and healing magic.
+Cleric: wears medium armour, can move moderately far, and has medium health. A cleric can use healing magic, wields a flail for melee attacks and a shield with which they can block incoming damage.
+Fighter: wears heavy armour and cannot move very far but has high health. A fighter wields a sword with which they can do melee attacks and a shield with which they can block incoming damage.
+Rogue: wears light armour, can move moderately far, and has medium health. A rogue wields a dagger with which they can perform melee attacks and can use cantrips.
+Ranger: wears medium armour, can move moderately far, and has medium health. A ranger wields a bow with which they can perform ranged attacks, and can cast ranged spells and healing magic. 
+
+You can now choose a class among: Wizard, Sorcerer, Cleric, Fighter, Rogue, Ranger. 
+Please choose your class, answer only with one word.
