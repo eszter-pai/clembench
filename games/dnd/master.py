@@ -54,6 +54,7 @@ class DND(GameMaster):
 
         #perhpas for evaluation
         # self.log_key('n_turns', n_turns)
+
     def initiate(self, prompt_player_a, prompt_player_b, prompt_player_dm):
 
         #append the initial message of each plaeyr to their history
@@ -70,11 +71,11 @@ class DND(GameMaster):
         action = {'type': 'send message', 'content': prompt_player_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
 
-
-    
     def play(self) -> None:
         while self.does_game_proceed():
             self.current_turn += 1
+        
+        
 
         return None
 
@@ -86,8 +87,6 @@ class DND(GameMaster):
         else:
             return False
         
-
-
 
     def _check_validity(self, answer: str) -> bool:             
 
