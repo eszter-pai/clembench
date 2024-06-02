@@ -93,7 +93,7 @@ class DND(GameMaster):
             return False
         
 
-    def get_utterance(self, player -> str):
+    def get_utterance(self, player) -> str:
         assert player in ('a', 'b')
         if player == 'a':            
 
@@ -134,7 +134,7 @@ class DND(GameMaster):
             #reply to its own memory
             
 
-    def _check_validity(self, answer: str) -> bool:
+    #def _check_validity(self, answer: str) -> bool:
 
 
     def turn(self) -> None:
