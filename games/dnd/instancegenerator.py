@@ -5,6 +5,7 @@ import os
 import sys
 import numpy as np
 from pathlib import Path
+
 from clemgame.clemgame import GameInstanceGenerator
 
 path = Path('./games/dnd')
@@ -14,19 +15,23 @@ os.mkdir(path / 'resources')
 os.mkdir(path / 'resources' / 'initial_prompts')
 os.mkdir(path / 'resources' / 'combat_prompts')
 
-levels = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 'legendary-guided', 'legendary-unguided',
-          'magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
+# define the levels which will make up experiments
+levels = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 
+          'legendary-guided', 'legendary-unguided',
+          'magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 
+          'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
 
 with open(path / 'resources' / 'levels.txt', 'w') as file:
     for level in levels:
         file.write(level + '\n') 
 
-monsters = pd.read_csv('./games/dnd/resources/dnd_monsters.csv')
-monsters['cr'] = pd.to_numeric(monsters['cr'], errors='coerce')
+# load (expanded) dataset 
+# -- see scripts for how that was done in dnd_data.py
+monsters = pd.read_csv('./resources/dnd_monsters_edited.csv')
 
 # filtering difficulty levels
 easy = monsters.loc[(monsters['cr']<=10) & (monsters['legendary'].isna())]
-hard = monsters.loc[(monsters['cr'].between(10,16)) & (monsters['legendary'].isna())]
+hard = monsters.loc[(monsters['cr'].between(11,15)) & (monsters['legendary'].isna())]
 legendary = monsters.loc[monsters['legendary']=='Legendary']
 
 # function to generate a random boss based on specified difficulty level
@@ -49,13 +54,21 @@ def generate_boss(difficulty: str):
     boss_name = boss['name']
     boss_dict = boss.to_dict()
 
+    # filter out columns we won't need 
+    unnecessary = [
+        'str', 'con', 'dex', 'int', 'wis', 'cha', 'source', 'url', 'speed', 'align'
+        ]
+    for i in unnecessary:
+        if i in boss_dict:
+            del boss_dict[i]
+
     return boss_name, boss_dict
 
 
 ######################## DND INSTANCE GENERATOR ########################
 
 GAME_NAME = 'dnd'
-N_INSTANCES = 10
+N_INSTANCES = 1
 SEED = 123
 
 class DnDGameInstanceGenerator(GameInstanceGenerator):
@@ -74,8 +87,10 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
         prompt_dm = self.load_template('resources/initial_prompts/game_intro_dm.template')
 
         # experiment names grouped by whether player chooses their class or not
-        chosen_class = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 'legendary-guided', 'legendary-unguided']
-        given_class = ['magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
+        chosen_class = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 
+                        'legendary-guided', 'legendary-unguided']
+        given_class = ['magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 
+                       'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
         magic_classes = ['Wizard', 'Sorcerer']
         melee_classes = ['Fighter', 'Rogue', 'Cleric']
         ranged_classes = ['Wizard', 'Sorcerer', 'Ranger']
@@ -85,9 +100,8 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
         # building the file, one experiment at a time
 
         for level in levels:
-            print(level)
-            # create an experiment 
 
+            # create an experiment 
             experiment = self.add_experiment(level)
             # build N_INSTANCES instances for each experiment
             for game_id in range(N_INSTANCES):
@@ -97,8 +111,10 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
                 if level in chosen_class:
                     instance['prompt_player_a'] = prompt_adv_a
                     instance['prompt_player_b'] = prompt_adv_b
+                    instance['player_a_class'] = None
+                    instance['player_b_class'] = None
 
-                # if player is given their class, randomly assign options, give corresp. template
+                # if player is given their class, randomly assign options, create corresp. template
                 elif level in given_class:
                     prompt_a = prompt_adv_given
                     prompt_b = prompt_adv_given
