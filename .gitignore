@@ -194,7 +194,7 @@ cython_debug/
 /venv_hf/
 /venv_llamacpp/
 
-# Eszter&Ronja PM
+# Eszter & Ronja PM
 firstlast
 .vscode/
 debug.py

@@ -12,7 +12,7 @@ from games.dnd.instancegenerator import GAME_NAME
 logger = get_logger(__name__)
 
 class DND(GameMaster):
-    """Implement mechanisms for playing FirstLast."""
+    """Implement mechanisms for playing DND."""
     def __init__(self, experiment: Dict, player_backends: List[str]):
         super().__init__(GAME_NAME, experiment, player_backends)
 
@@ -21,8 +21,6 @@ class DND(GameMaster):
         self.model_b = player_backends[1]
         self.model_c = player_backends[2]
         self.cls = ["Wizard", "Sorcerer", "Cleric", "Fighter", "Rogue", "Ranger"]
-
-        # stats and actions?
 
 
         
@@ -35,7 +33,7 @@ class DND(GameMaster):
 
     def set_up(self, **game_instance):
 
-        #initialize players
+        #instantiate players
         self.player_a = Hero()
         self.player_b = Hero()
         self.player_dm = DungeonMaster()
@@ -43,6 +41,7 @@ class DND(GameMaster):
         #initialize game variable
         self.current_turn: int = 0
         self.potions = 7
+        
 
         #log the details of players
         self.log_players({
@@ -55,6 +54,24 @@ class DND(GameMaster):
 
         #perhpas for evaluation
         # self.log_key('n_turns', n_turns)
+    def initiate(self, prompt_player_a, prompt_player_b, prompt_player_dm):
+
+        #append the initial message of each plaeyr to their history
+        self.player_a.history.append({'role': 'user', 'content': prompt_player_a})
+        self.player_b.history.append({'role': 'user', 'content': prompt_player_b})
+        self.player_dm.history.append({'role': 'user', 'content': prompt_player_dm})
+
+
+        #log the messages as events for the transcriptions
+        action = {'type': 'send message', 'content': prompt_player_a}
+        self.log_event(from_='GM', to='Player 1', action=action)
+        action = {'type': 'send message', 'content': prompt_player_b}
+        self.log_event(from_='GM', to='Player 2', action=action)
+        action = {'type': 'send message', 'content': prompt_player_dm}
+        self.log_event(from_='GM', to='Dungeon Master', action=action)
+
+
+    
     def play(self) -> None:
         while self.does_game_proceed():
             self.current_turn += 1
@@ -69,7 +86,10 @@ class DND(GameMaster):
         else:
             return False
         
-    def initiate(prompt_a, prompt_b, prompt_dm):
+
+
+
+    def _check_validity(self, answer: str) -> bool:             
 
 
 
