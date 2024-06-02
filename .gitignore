@@ -193,3 +193,10 @@ cython_debug/
 #.idea/
 /venv_hf/
 /venv_llamacpp/
+
+# Eszter&Ronja PM
+firstlast
+.vscode/
+debug.py
+dnd.ipynb
+dnd_add_game.ipynb
