@@ -1,7 +1,7 @@
 from clemgame.clemgame import Player
 from typing import List
 
-class Hero(Player):
+class Adventurer(Player):
     def __init__(self, model_name: str, player: str, clss: str):
         super().__init__(model_name)
         self.player: str = player

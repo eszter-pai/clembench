@@ -5,7 +5,7 @@ import clemgame.metrics as ms
 from clemgame.clemgame import GameMaster, GameBenchmark
 from clemgame import get_logger
 
-from games.dnd.players import Hero, DungeonMaster
+from games.dnd.players import Adventurer, DungeonMaster
 from games.dnd.instancegenerator import GAME_NAME
 
 # use the framework logger to log events relevant at runtime;
@@ -17,10 +17,13 @@ class DND(GameMaster):
     def __init__(self, experiment: Dict, player_backends: List[str]):
         super().__init__(GAME_NAME, experiment, player_backends)
 
-        # save experiment and player attributes that will be necessary later
+
+        #all levels are in dnd/in/resources/levels.txt
+        self.levels = experiment['name']
         self.model_a = player_backends[0]
         self.model_b = player_backends[1]
         self.model_c = player_backends[2]
+
         self.cls = ["Wizard", "Sorcerer", "Cleric", "Fighter", "Rogue", "Ranger"]
 
         # initialise attributes that will be used for the evaluation scores
@@ -35,20 +38,21 @@ class DND(GameMaster):
         self.game_instance = game_instance # fetch game parameters here
 
         #instantiate players
-        self.player_a = Hero()
-        self.player_b = Hero()
+        self.player_a = Adventurer()
+        self.player_b = Adventurer()
         self.player_dm = DungeonMaster()
 
         #initialize game variable
         self.current_turn: int = 0
+        #the potions are shared among the heroes
         self.potions = 7
         
 
         #log the details of players
         self.log_players({
             'GM': 'Game master for DnD',
-            'Player 1': f'Hero A: {self.model_a}',
-            'Player 2': f'Hero B: {self.model_b}',
+            'Player 1': f'Adventurer A: {self.model_a}',
+            'Player 2': f'Adventurer B: {self.model_b}',
             'Dungeon Master': f'Dungeon Master: {self.model_c}'
             })
 
@@ -77,7 +81,7 @@ class DND(GameMaster):
             self.current_turn += 1
             self.log_next_turn()
             self.turn()
-        if self.complete_turns == self.n_turns:
+        if self.complete_turns == self.max_turn:
             # log a message informing that the game was successfuly played
             action = {'type': 'info', 'content': 'game successful'}
             self.log_event(from_='GM', to='GM', action=action)
@@ -94,7 +98,7 @@ class DND(GameMaster):
         
 
     def get_utterance(self, player) -> str:
-        assert player in ('a', 'b')
+
         if player == 'a':            
 
             #API call (or get a programmatic response) from player a
@@ -139,19 +143,35 @@ class DND(GameMaster):
 
     def turn(self) -> None:
         #get A, B, and DM's response
-        answer_a = self._get_utterance('a')
-        answer_a = self._get_utterance('b')
-        answer_a = self._get_utterance('dm')
+        answer_a = self.get_utterance('a')
+        answer_a = self.get_utterance('b')
+        answer_a = self.get_utterance('dm')
 
         #check A's response's validity
         is_valid_turn = self._check_validity(answer_a)
         if not is_valid_turn:
-            # stop game
+            #stop game
             return None
         
         #also add the reply to the transcript
         
 
 
+# always add the GameBenchmark child with this structure
+class DnDGameBenchmark(GameBenchmark):
+    """Integrate the game into the benchmark run."""
+    def __init__(self):
+        super().__init__(GAME_NAME)
 
+    def is_single_player(self):
+        return False
+
+    def get_description(self):
+        return "A fantasy RPG game in which the adventurers ventured into a dungeon and their goal is to defeat the boss."
+
+    def create_game_master(self,
+                           experiment: Dict,
+                           player_backends: List[str]
+                           ) -> GameMaster:
+        return DND(experiment, player_backends)
     

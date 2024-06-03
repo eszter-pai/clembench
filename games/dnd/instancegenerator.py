@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 
 from clemgame.clemgame import GameInstanceGenerator
-
+"""
 path = Path('./games/dnd')
 
 os.mkdir(path / 'in')
@@ -24,10 +24,10 @@ levels = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided',
 with open(path / 'resources' / 'levels.txt', 'w') as file:
     for level in levels:
         file.write(level + '\n') 
-
+"""
 # load (expanded) dataset 
 # -- see scripts for how that was done in dnd_data.py
-monsters = pd.read_csv('./resources/dnd_monsters_edited.csv')
+monsters = pd.read_csv('./games/dnd/resources/dnd_monsters_edited.csv')
 
 # filtering difficulty levels
 easy = monsters.loc[(monsters['cr']<=10) & (monsters['legendary'].isna())]

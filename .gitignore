@@ -197,6 +197,7 @@ cython_debug/
 # Eszter & Ronja PM
 firstlast
 .vscode/
+docs/
 debug.py
 dnd.ipynb
 dnd_add_game.ipynb
