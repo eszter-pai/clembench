@@ -15,6 +15,7 @@ logger = get_logger(__name__)
 class DND(GameMaster):
     """Implement mechanisms for playing DND."""
     def __init__(self, experiment: Dict, player_backends: List[str]):
+
         super().__init__(GAME_NAME, experiment, player_backends)
 
 
@@ -22,7 +23,7 @@ class DND(GameMaster):
         self.levels = experiment['name']
         self.model_a = player_backends[0]
         self.model_b = player_backends[1]
-        self.model_c = player_backends[2]
+        self.model_c = player_backends[2] #however player_backends = [mock, mock], cause idx error
 
         self.cls = ["Wizard", "Sorcerer", "Cleric", "Fighter", "Rogue", "Ranger"]
 
@@ -33,14 +34,21 @@ class DND(GameMaster):
         self.complete_turns: int = 0
 
 
-    def set_up(self, **game_instance):
-
-        self.game_instance = game_instance # fetch game parameters here
+    def setup(self, **game_instance)-> None:
 
         #instantiate players
         self.player_a = Adventurer()
         self.player_b = Adventurer()
         self.player_dm = DungeonMaster()
+
+        #initialize players' classes: 
+        # if GM does not give them class, then its null
+        self.player_a_class = game_instance['player_a_class']
+        self.player_B_class = game_instance['player_a_class']
+        #DM's monster is always given:
+        # self.player_dm
+
+
 
         #initialize game variable
         self.current_turn: int = 0
