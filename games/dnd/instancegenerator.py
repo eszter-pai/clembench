@@ -65,8 +65,6 @@ def generate_boss(difficulty: str):
     return boss_name, boss_dict
 
 
-######################## DND INSTANCE GENERATOR ########################
-
 GAME_NAME = 'dnd'
 N_INSTANCES = 1
 SEED = 123
@@ -87,10 +85,8 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
         prompt_dm = self.load_template('resources/initial_prompts/game_intro_dm.template')
 
         # experiment names grouped by whether player chooses their class or not
-        chosen_class = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 
-                        'legendary-guided', 'legendary-unguided']
-        given_class = ['magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 
-                       'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
+        chosen_class = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 'legendary-guided', 'legendary-unguided']
+        given_class = ['magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
         magic_classes = ['Wizard', 'Sorcerer']
         melee_classes = ['Fighter', 'Rogue', 'Cleric']
         ranged_classes = ['Wizard', 'Sorcerer', 'Ranger']
@@ -106,6 +102,11 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
             # build N_INSTANCES instances for each experiment
             for game_id in range(N_INSTANCES):
                 instance = self.add_game_instance(experiment, game_id)
+                    # add game mode
+                if '-guided' in level:
+                    instance['mode'] = 'guided'
+                elif "-unguided" in level:
+                    instance['mode'] = 'unguided'
 
                 # if the player chooses their class, no further action needed, give corresp. template
                 if level in chosen_class:
