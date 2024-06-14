@@ -23,7 +23,7 @@ class DND(GameMaster):
         self.levels = experiment['name']
         self.model_a = player_backends[0]
         self.model_b = player_backends[1]
-        self.model_c = player_backends[2] #however player_backends = [mock, mock], cause idx error
+        self.model_c = player_backends[1] 
 
         self.cls = ["Wizard", "Sorcerer", "Cleric", "Fighter", "Rogue", "Ranger"]
 
@@ -41,11 +41,17 @@ class DND(GameMaster):
         self.player_b = Adventurer()
         self.player_dm = DungeonMaster()
 
-        #initialize players' classes: 
+        # initialize players' classes: 
         # if GM does not give them class, then its null
         self.player_a_class = game_instance['player_a_class']
-        self.player_B_class = game_instance['player_a_class']
-        #DM's monster is always given:
+        self.player_B_class = game_instance['player_b_class']
+
+        prompt_player_a = game_instance['prompt_player_a']
+        prompt_player_b = game_instance['prompt_player_b']
+        prompt_dm = game_instance['prompt_dm']
+
+        self.player_a_class = game_instance['player_a_class']
+        # DM's monster is always given:
         # self.player_dm
 
 
@@ -64,7 +70,7 @@ class DND(GameMaster):
             'Dungeon Master': f'Dungeon Master: {self.model_c}'
             })
 
-
+        self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
         #perhpas for evaluation
         # self.log_key('n_turns', n_turns)
 
