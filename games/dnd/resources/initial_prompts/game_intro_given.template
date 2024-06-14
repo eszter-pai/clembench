@@ -30,4 +30,4 @@ Rogue: wears light armour, can move moderately far, and has medium health. A rog
 Ranger: wears medium armour, can move moderately far, and has medium health. A ranger wields a bow with which they can perform ranged attacks, and can cast ranged spells and healing magic. 
 
 Your class is: $player_class. 
-Please confirm your class, answer only with one word.
+Please confirm your class, answer only with the name of your class.

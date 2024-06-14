@@ -3,13 +3,14 @@ import random
 import string
 import os
 import sys
+import json
 import numpy as np
 from pathlib import Path
 
 from clemgame.clemgame import GameInstanceGenerator
-"""
-path = Path('./games/dnd')
 
+path = Path('./games/dnd')
+"""
 os.mkdir(path / 'in')
 os.mkdir(path / 'resources')
 os.mkdir(path / 'resources' / 'initial_prompts')
@@ -24,7 +25,14 @@ levels = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided',
 with open(path / 'resources' / 'levels.txt', 'w') as file:
     for level in levels:
         file.write(level + '\n') 
+
+basegame_levels = ['magic-only', 'melee-only', 'balanced']
+
+with open(path / 'resources' / 'basegame_levels.txt', 'w') as file:
+    for level in basegame_levels:
+        file.write(level + '\n') 
 """
+
 # load (expanded) dataset 
 # -- see scripts for how that was done in dnd_data.py
 monsters = pd.read_csv('./games/dnd/resources/dnd_monsters_edited.csv')
@@ -51,7 +59,6 @@ def generate_boss(difficulty: str):
     else:
         print("Please select a valid difficulty")
 
-    boss_name = boss['name']
     boss_dict = boss.to_dict()
 
     # filter out columns we won't need 
@@ -62,12 +69,15 @@ def generate_boss(difficulty: str):
         if i in boss_dict:
             del boss_dict[i]
 
-    return boss_name, boss_dict
+    return boss_dict
 
 
 GAME_NAME = 'dnd'
-N_INSTANCES = 1
+N_INSTANCES = 10
 SEED = 123
+
+f = open(path / 'resources' / 'classes_data.json', 'r')
+class_info = json.load(f)
 
 class DnDGameInstanceGenerator(GameInstanceGenerator):
     def __init__(self):
@@ -76,92 +86,75 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
     def on_generate(self):
         
         # get list of experiments which for us will be levels
-        levels = self.load_file('resources/levels.txt').strip('\n').split('\n')
+        levels = self.load_file('resources/basegame_levels.txt').strip('\n').split('\n')
+        difficulties = ['easy', 'hard', 'legendary']
 
         # get initial prompt templates for adventurers and dm
-        prompt_adv_a = self.load_template('resources/initial_prompts/game_intro_a.template')
-        prompt_adv_b = self.load_template('resources/initial_prompts/game_intro_b.template')
-        prompt_adv_given = self.load_template('resources/initial_prompts/game_intro_given.template')
+        prompt_adv = self.load_template('resources/initial_prompts/game_intro_given.template')
         prompt_dm = self.load_template('resources/initial_prompts/game_intro_dm.template')
 
         # experiment names grouped by whether player chooses their class or not
-        chosen_class = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 'legendary-guided', 'legendary-unguided']
-        given_class = ['magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
         magic_classes = ['Wizard', 'Sorcerer']
         melee_classes = ['Fighter', 'Rogue', 'Cleric']
         ranged_classes = ['Wizard', 'Sorcerer', 'Ranger']
-        easy_lvls = ['easy-guided', 'easy-unguided', 'magic-only-guided', 'magic-only-unguided', 
-                     'melee-only-guided', 'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
 
         # building the file, one experiment at a time
 
         for level in levels:
+            for difficulty in difficulties:
+                # create an experiment 
+                experiment = self.add_experiment(f"{level}_{difficulty}")
+                
+                # build N_INSTANCES instances for each experiment
+                for game_id in range(N_INSTANCES):
+                    instance = self.add_game_instance(experiment, game_id)
 
-            # create an experiment 
-            experiment = self.add_experiment(level)
-            # build N_INSTANCES instances for each experiment
-            for game_id in range(N_INSTANCES):
-                instance = self.add_game_instance(experiment, game_id)
-                    # add game mode
-                if '-guided' in level:
+                    # game mode: only guided in base game ?? 
+                    # NOTE: would like to add unguided as well
                     instance['mode'] = 'guided'
-                elif "-unguided" in level:
-                    instance['mode'] = 'unguided'
-
-                # if the player chooses their class, no further action needed, give corresp. template
-                if level in chosen_class:
-                    instance['prompt_player_a'] = prompt_adv_a
-                    instance['prompt_player_b'] = prompt_adv_b
-                    instance['player_a_class'] = None
-                    instance['player_b_class'] = None
-
-                # if player is given their class, randomly assign options, create corresp. template
-                elif level in given_class:
-                    prompt_a = prompt_adv_given
-                    prompt_b = prompt_adv_given
-
-                    if level=='magic-only-guided' or level=='magic-only-unguided':
-                        class_a = random.choice(magic_classes)
-                        class_b = random.choice(magic_classes)
-                    elif level=='melee-only-guided' or level=='melee-only-unguided':
-                        class_a = random.choice(melee_classes)
-                        class_b = random.choice(melee_classes)
-                    elif level=='balanced-guided' or level=='balanced-unguided':
-                        class_a = random.choice(melee_classes)
-                        class_b = random.choice(ranged_classes)
+                    
+                    # assign random classes to players from level specification
+                    if level=='magic-only':
+                        player_a_cls = random.choice(magic_classes)
+                        player_b_cls = random.choice(magic_classes)
+                    elif level=='melee-only':
+                        player_a_cls = random.choice(melee_classes)
+                        player_b_cls = random.choice(melee_classes)
+                    elif level=='balanced':
+                        player_a_cls = random.choice(melee_classes)
+                        player_b_cls = random.choice(ranged_classes)
                     else:
                         raise Exception("Level couldn't be assigned.")
                     
-                    instance['player_a_class'] = class_a
-                    instance['player_b_class'] = class_b
-                    instance['prompt_player_a'] = self.create_prompt('adventurer', class_a, prompt_a)
-                    instance['prompt_player_b'] = self.create_prompt('adventurer', class_b, prompt_b)
+                    instance['player_a_class'] = player_a_cls
+                    instance['player_b_class'] = player_b_cls
+                    # create prompts 
+                    instance['prompt_player_a'] = string.Template(prompt_adv).substitute(
+                        player_class=player_a_cls)
+                    instance['prompt_player_b'] = string.Template(prompt_adv).substitute(
+                        player_class=player_b_cls)
+                    instance['prompt_dm'] = prompt_dm
 
-                ####### BOSS ASSIGNMENT ########
+                    # store players' info
+                    for dict in class_info:
+                        if dict['Class Name'] == player_a_cls:
+                            instance['player_a_dict'] = dict
+                        elif dict['Class Name'] == player_b_cls:
+                            instance['player_b_dict'] = dict
 
-                if level in easy_lvls:
-                    boss_name, boss_dict = generate_boss('easy')
-                elif level=='hard-guided' or level=='hard-unguided':
-                    boss_name, boss_dict = generate_boss('hard')
-                elif level=='legendary-guided' or level=='legendary-unguided':
-                    boss_name, boss_dict = generate_boss('legendary')
+                    #generate instance boss based on the exp-difficulty
+                    instance['boss_dict'] = generate_boss(difficulty)
 
-                instance['boss_name'] = boss_name
-                instance['boss_dict'] = boss_dict
-                instance['prompt_dm'] = self.create_prompt('dm', boss_name, prompt_dm)
-                
-    # generate the prompt 
-    def create_prompt(self, player_type: str, name: str, prompt: str) -> str:
-        """Fill prompt template."""
+                    ####### RESPONSES ####### 
+                    # first response must be player's class or role
+                    instance['player_a_first_resp'] = player_a_cls
+                    instance['player_b_first_resp'] = player_b_cls
+                    instance['dm_first_resp'] = "Dungeon Master"
 
-        if player_type == 'adventurer':
-            text = string.Template(prompt).substitute(player_class=name)
-        elif player_type == 'dm':
-            text = string.Template(prompt).substitute(boss=name)
-        else:
-            raise Exception('Please specify a valid player type.')
-        
-        return text
+                    # continued responses must follow format:
+                    # instance['response_format'] = '^MOVE:\s(?P<content>)\n\
+                    #     ^ACTION:\s \n\
+                    #     ^ROLL:\s*(?P<remainder>.*)'
     
 if __name__ == '__main__':
     random.seed(SEED)
