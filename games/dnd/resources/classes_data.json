@@ -1,0 +1,69 @@
+[
+    {
+        "Class Name": "Wizard",
+        "Hit Points": 43,
+        "Armor Class": 10,
+        "Stamina": 5,
+        "Actions": [
+            {"Name": "Spell: Ice Knife", "Damage": "3d6", "Type": "Ice"},
+            {"Name": "Cantrip: Fire Bolt", "Damage": "4d4", "Type": "Fire"},
+            {"Name": "Attack: Quarterstaff attack", "Damage": "2d4", "Type": "Blunt"}
+        ]
+    },
+    {
+        "Class Name": "Sorcerer",
+        "Hit Points": 43,
+        "Armor Class": 10,
+        "Stamina": 5,
+        "Actions": [
+            {"Name": "Spell: Fire Ball", "Damage": "3d6", "Type": "Fire"},
+            {"Name": "Cantrip: Ray of Frost", "Damage": "3d4", "Type": "Ice"},
+            {"Name": "Spell: Restoration", "Damage": "2d8", "Type": "Healing"}
+        ]
+    },
+    {
+        "Class Name": "Cleric",
+        "Hit Points": 46,
+        "Armor Class": 13,
+        "Stamina": 4,
+        "Actions": [
+            {"Name": "Attack: Flail attack", "Damage": "3d6", "Type": "Piercing"},
+            {"Name": "Spell: Revivify", "Description": "Revive another player"},
+            {"Name": "Spell: Healing Word", "Damage": "2d8", "Type": "Healing"},
+            {"Name": "Block", "Description": "Block Incoming Damage on self or other player"}
+        ]
+    },
+    {
+        "Class Name": "Fighter",
+        "Hit Points": 48,
+        "Armor Class": 20,
+        "Stamina": 3,
+        "Actions": [
+            {"Name": "Attack: Sword attack", "Damage": "4d6", "Type": "Slashing"},
+            {"Name": "Attack: Pommel strike", "Damage": "2d4", "Type": "Blunt"},
+            {"Name": "Block", "Description": "Block Incoming Damage on self or other player"}
+        ]
+    },
+    {
+        "Class Name": "Rogue",
+        "Hit Points": 44,
+        "Armor Class": 15,
+        "Stamina": 4,
+        "Actions": [
+            {"Name": "Attack: Dagger attack", "Damage": "4d4", "Type": "Slashing"},
+            {"Name": "Attack: Stealth attack", "Damage": "4d6", "Type": "Slashing"},
+            {"Name": "Cantrip: Fire Bolt", "Damage": "3d4", "Type": "Fire"}
+        ]
+    },
+    {
+        "Class Name": "Ranger",
+        "Hit Points": 46,
+        "Armor Class": 15,
+        "Stamina": 4,
+        "Actions": [
+            {"Name": "Attack: Ranged attack", "Damage": "3d6", "Type": "Piercing"},
+            {"Name": "Spell: Ensnaring strike", "Damage": "2d4", "Type": "Piercing"},
+            {"Name": "Spell: Healing word", "Damage": "2d8", "Type": "Healing"}
+        ]
+    }
+]
