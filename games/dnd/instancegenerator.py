@@ -76,8 +76,7 @@ GAME_NAME = 'dnd'
 N_INSTANCES = 10
 SEED = 123
 
-f = open(path / 'resources' / 'classes_data.json', 'r')
-class_info = json.load(f)
+class_info = json.load('./resources/classes_data.json')
 
 class DnDGameInstanceGenerator(GameInstanceGenerator):
     def __init__(self):
@@ -151,10 +150,9 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
                     instance['player_b_first_resp'] = player_b_cls
                     instance['dm_first_resp'] = "Dungeon Master"
 
-                    # continued responses must follow format:
-                    # instance['response_format'] = '^MOVE:\s(?P<content>)\n\
-                    #     ^ACTION:\s \n\
-                    #     ^ROLL:\s*(?P<remainder>.*)'
+                    # continued responses must follow given format:
+                    instance['response_format'] = '^MOVE: (?:[A-E][1-5]|stay)\nACTION: (?P<content>)\n\
+TARGET: (player a|player b|self|Boss) in [A-E][1-5]\nROLL: (none|[1-9]|[1-9][0-9])\n*(?P<remainder>.*)'
     
 if __name__ == '__main__':
     random.seed(SEED)
