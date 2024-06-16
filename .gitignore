@@ -204,3 +204,4 @@ dnd_add_game.ipynb
 instances.ipynb
 docs/howto_prototype_games.ipynb
 dnd_instances.ipynb
+clemgame/__init__.py

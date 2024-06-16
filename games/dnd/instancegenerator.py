@@ -76,7 +76,7 @@ GAME_NAME = 'dnd'
 N_INSTANCES = 10
 SEED = 123
 
-class_info = json.load('./resources/classes_data.json')
+class_info = json.load(open('games/dnd/resources/classes_data.json'))
 
 class DnDGameInstanceGenerator(GameInstanceGenerator):
     def __init__(self):

@@ -12,7 +12,7 @@ from games.dnd.instancegenerator import GAME_NAME
 # this is independent from the game records / transcript
 logger = get_logger(__name__)
 
-class DND(GameMaster):
+class DnD(GameMaster):
     """Implement mechanisms for playing DND."""
     def __init__(self, experiment: Dict, player_backends: List[str]):
 
@@ -23,9 +23,9 @@ class DND(GameMaster):
         self.levels = experiment['name']
         self.model_a = player_backends[0]
         self.model_b = player_backends[1]
-        self.model_c = player_backends[1] 
+        self.model_dm = player_backends[1] 
 
-        self.cls = ["Wizard", "Sorcerer", "Cleric", "Fighter", "Rogue", "Ranger"]
+
 
         # initialise attributes that will be used for the evaluation scores
         self.max_turn = 15
@@ -36,15 +36,18 @@ class DND(GameMaster):
 
     def setup(self, **game_instance)-> None:
 
-        #instantiate players
-        self.player_a = Adventurer()
-        self.player_b = Adventurer()
-        self.player_dm = DungeonMaster()
-
         # initialize players' classes: 
         # if GM does not give them class, then its null
         self.player_a_class = game_instance['player_a_class']
         self.player_B_class = game_instance['player_b_class']
+        self.player_dm_monster = game_instance['boss_dict']['name']
+
+        #instantiate players
+        self.player_a = Adventurer(self.model_a, "A", self.player_a_class)
+        self.player_b = Adventurer(self.model_b, "B", self.player_B_class)
+        self.player_dm = DungeonMaster(self.model_dm, "DM", self.player_dm_monster)
+
+
 
         prompt_player_a = game_instance['prompt_player_a']
         prompt_player_b = game_instance['prompt_player_b']
@@ -90,6 +93,10 @@ class DND(GameMaster):
         action = {'type': 'send message', 'content': prompt_player_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
 
+    @classmethod
+    def applies_to(cls, game_name: str) -> bool:
+        return game_name == GAME_NAME
+    
     def play(self) -> None:
         while self.does_game_proceed():
             self.current_turn += 1
@@ -187,5 +194,5 @@ class DnDGameBenchmark(GameBenchmark):
                            experiment: Dict,
                            player_backends: List[str]
                            ) -> GameMaster:
-        return DND(experiment, player_backends)
+        return DnD(experiment, player_backends)
     

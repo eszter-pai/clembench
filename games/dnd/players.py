@@ -20,11 +20,14 @@ class Adventurer(Player):
             return "MOVE: to A1\nACTION: Cantrip: Fire Bolt on Fire Snake in D3\nDAMAGE: 12"
 
 class DungeonMaster(Player):
-    def __init__(self, model_name: str, player: str):
+    def __init__(self, model_name: str, player: str, clss: str):
         super().__init__(model_name)
 
         #the player's assigned monster
         self.player:str = player
+
+        #the given mosnter
+        self.clss: str = clss
 
         self.history: List = []
 
