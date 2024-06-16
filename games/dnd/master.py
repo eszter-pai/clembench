@@ -6,6 +6,7 @@ from clemgame.clemgame import GameMaster, GameBenchmark
 from clemgame import get_logger
 
 from games.dnd.players import Adventurer, DungeonMaster
+from games.dnd.dungeon import Dungeon
 from games.dnd.instancegenerator import GAME_NAME
 
 # use the framework logger to log events relevant at runtime;
@@ -22,7 +23,7 @@ class DnD(GameMaster):
         #all levels are in dnd/in/resources/levels.txt
         self.levels = experiment['name']
         self.model_a = player_backends[0]
-        self.model_b = player_backends[1]
+        self.model_b = player_backends[0]
         self.model_dm = player_backends[1] 
 
 
@@ -54,8 +55,7 @@ class DnD(GameMaster):
         prompt_dm = game_instance['prompt_dm']
 
         self.player_a_class = game_instance['player_a_class']
-        # DM's monster is always given:
-        # self.player_dm
+
 
 
 
@@ -64,13 +64,14 @@ class DnD(GameMaster):
         #the potions are shared among the heroes
         self.potions = 7
         
+        self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
 
         #log the details of players
         self.log_players({
             'GM': 'Game master for DnD',
             'Player 1': f'Adventurer A: {self.model_a}',
             'Player 2': f'Adventurer B: {self.model_b}',
-            'Dungeon Master': f'Dungeon Master: {self.model_c}'
+            'Dungeon Master': f'Dungeon Master: {self.model_dm}'
             })
 
         self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
@@ -107,6 +108,9 @@ class DnD(GameMaster):
             action = {'type': 'info', 'content': 'game successful'}
             self.log_event(from_='GM', to='GM', action=action)
         
+        # log a final message saying that the game did came to an end
+        action = {'type': 'info', 'content': 'end game'}
+        self.log_event(from_='GM', to='GM', action=action)
         return None
 
 
