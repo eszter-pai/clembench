@@ -17,15 +17,6 @@ os.mkdir(path / 'resources' / 'initial_prompts')
 os.mkdir(path / 'resources' / 'combat_prompts')
 
 # define the levels which will make up experiments
-levels = ['easy-guided', 'easy-unguided', 'hard-guided', 'hard-unguided', 
-          'legendary-guided', 'legendary-unguided',
-          'magic-only-guided', 'magic-only-unguided', 'melee-only-guided', 
-          'melee-only-unguided', 'balanced-guided', 'balanced-unguided']
-
-with open(path / 'resources' / 'levels.txt', 'w') as file:
-    for level in levels:
-        file.write(level + '\n') 
-
 basegame_levels = ['magic-only', 'melee-only', 'balanced']
 
 with open(path / 'resources' / 'basegame_levels.txt', 'w') as file:
@@ -33,41 +24,72 @@ with open(path / 'resources' / 'basegame_levels.txt', 'w') as file:
         file.write(level + '\n') 
 """
 
-# load (expanded) dataset 
-# -- see scripts for how that was done in dnd_data.py
-monsters = pd.read_csv('./games/dnd/resources/dnd_monsters_edited.csv')
-
-# filtering difficulty levels
-easy = monsters.loc[(monsters['cr']<=10) & (monsters['legendary'].isna())]
-hard = monsters.loc[(monsters['cr'].between(11,15)) & (monsters['legendary'].isna())]
-legendary = monsters.loc[monsters['legendary']=='Legendary']
-
-# function to generate a random boss based on specified difficulty level
-
 def generate_boss(difficulty: str):
-    """Retrieve a random boss from the dataset based on a specified difficulty."""
+    """
+    Generate a random dungeon boss whose properties are tied to difficulty.
+    Returns a dictionary of the boss' properties in a similar format as players' class dictionary.
+    Accepts difficulties: "easy", "hard", "legendary"
+    """
 
-    if difficulty=='easy':
-        rdm_idx = np.random.choice(easy.index)
-        boss = easy.loc[rdm_idx]
-    elif difficulty=='hard':
-        rdm_idx = np.random.choice(hard.index)
-        boss = hard.loc[rdm_idx]
-    elif difficulty=='legendary':
-        rdm_idx = np.random.choice(legendary.index)
-        boss = legendary.loc[rdm_idx]
+    # initialise boss dictionary
+    boss_dict = {"Class Name": "Boss"}
+
+    # pool of set values for generation
+    size_stamina = {'Tiny': 2, 'Small': 3, 'Medium': 4, 'Large': 3, 'Huge': 2, 'Gargantuan': 1}
+    resistances = ['Fire', 'Ice', 'Piercing', 'Slashing', 'Blunt']
+
+    ############# Difficulty-independent properties #############
+    size = random.choice(list(size_stamina))    # generate boss' size (independent of difficulty)
+    boss_dict['Size'] = size
+    boss_dict['Stamina'] = size_stamina[size]   # generate boss' stamina (dependent on size)
+    boss_dict['Resistance'] = random.choice(resistances)
+
+    ############# Difficulty-dependent properties #############
+    # boss's health, armour class, and attack dice depend on difficulty
+    if difficulty == 'easy':
+        hp_pool = (20,80)
+        ac_pool = (5,9)
+        atk_dice = '2d6'
+        boss_dict['Difficulty'] = 'Easy'
+    elif difficulty == 'hard':
+        hp_pool = (80,150)
+        ac_pool = (9,13)
+        atk_dice = '3d6'
+        boss_dict['Difficulty'] = 'Hard'
+    elif difficulty == 'legendary':
+        hp_pool = (150,200)
+        ac_pool = (14,18)
+        atk_dice = '4d6'
+        boss_dict['Difficulty'] = 'Legendary'
     else:
-        print("Please select a valid difficulty")
+        raise Exception("Please provide a valid difficulty.")
+    
+    # generate boss' Hit Points
+    boss_dict['Hit Points'] = random.randint(hp_pool[0], hp_pool[1])
+    # generate boss' Armour Class
+    boss_dict['Armor Class'] = random.randint(ac_pool[0], ac_pool[1])
 
-    boss_dict = boss.to_dict()
+    # generate attacks boss can do
+    boss_actions = []
+    # all bosses can do a melee attack which requires being in a position adjacent to the target's
+    melee_action = {"Name": "Attack: Melee attack", "Dice": atk_dice, "Type": "Blunt", "Condition": "adjacency"}
+    boss_actions.append(melee_action)
 
-    # filter out columns we won't need 
-    unnecessary = [
-        'str', 'con', 'dex', 'int', 'wis', 'cha', 'source', 'url', 'speed', 'align'
-        ]
-    for i in unnecessary:
-        if i in boss_dict:
-            del boss_dict[i]
+    # bosses get an additional action based on their resistance-type
+    special_actions = {
+        "Fire": {"Name": "Attack: Fire Breath", "Dice": atk_dice, "Type": "Fire", "Condition": "None"},
+        "Ice": {"Name": "Attack: Ice Storm", "Dice": atk_dice, "Type": "Ice", "Condition": "None"},
+        "Piercing": {"Name": "Attack: Arrow of Death", "Dice": atk_dice, "Type": "Piercing", "Condition": "None"},
+        "Slashing": {"Name": "Attack: Whip", "Dice": atk_dice, "Type": "Slashing", "Condition": "None"},
+        "Blunt": {"Name": "Attack: Hammer Throw", "Dice": atk_dice, "Type": "Blunt", "Condition": "None"}
+    }
+    
+    # assign special action
+    special_action = special_actions[boss_dict['Resistance']]
+    boss_actions.append(special_action)
+
+    # add actions to boss dict
+    boss_dict['Actions'] = boss_actions
 
     return boss_dict
 
@@ -151,8 +173,13 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
                     instance['dm_first_resp'] = "Dungeon Master"
 
                     # continued responses must follow given format:
-                    instance['response_format'] = '^MOVE: (?:[A-E][1-5]|stay)\nACTION: (?P<content>)\n\
-TARGET: (player a|player b|self|Boss) in [A-E][1-5]\nROLL: (none|[1-9]|[1-9][0-9])\n*(?P<remainder>.*)'
+                    response_dict = {
+                        'MOVE: ': '(?:[A-E][1-5]|stay)',
+                        'ACTION: ': '(?P<content>)',
+                        'TARGET: ': '(player a|player b|self|boss)\sin\s[A-E][1-5]',
+                        'ROLL: ': '(?:none|1[1-9]|2[0-4])' # highest dice is 4d6 so highest possible roll is 24
+                    }
+                    instance['response_format'] = response_dict
     
 if __name__ == '__main__':
     random.seed(SEED)
