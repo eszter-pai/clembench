@@ -4,10 +4,12 @@
         "Hit Points": 43,
         "Armor Class": 10,
         "Stamina": 5,
+        "Spell slots": 7,
         "Actions": [
-            {"Name": "Spell: Ice Knife", "Damage": "3d6", "Type": "Ice"},
-            {"Name": "Cantrip: Fire Bolt", "Damage": "4d4", "Type": "Fire"},
-            {"Name": "Attack: Quarterstaff attack", "Damage": "2d4", "Type": "Blunt"}
+            {"Name": "Spell: Ice Knife", "Dice": "3d6", "Type": "Ice"},
+            {"Name": "Cantrip: Fire Bolt", "Dice": "4d4", "Type": "Fire"},
+            {"Name": "Attack: Quarterstaff attack", "Dice": "2d4", "Type": "Blunt"},
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing"}
         ]
     },
     {
@@ -15,10 +17,12 @@
         "Hit Points": 43,
         "Armor Class": 10,
         "Stamina": 5,
+        "Spell slots": 7,
         "Actions": [
-            {"Name": "Spell: Fire Ball", "Damage": "3d6", "Type": "Fire"},
-            {"Name": "Cantrip: Ray of Frost", "Damage": "3d4", "Type": "Ice"},
-            {"Name": "Spell: Restoration", "Damage": "2d8", "Type": "Healing"}
+            {"Name": "Spell: Fire Ball", "Dice": "3d6", "Type": "Fire"},
+            {"Name": "Cantrip: Ray of Frost", "Dice": "3d4", "Type": "Ice"},
+            {"Name": "Spell: Restoration", "Dice": "2d8", "Type": "Healing"},
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing"}
         ]
     },
     {
@@ -26,11 +30,13 @@
         "Hit Points": 46,
         "Armor Class": 13,
         "Stamina": 4,
+        "Spell slots": 5,
         "Actions": [
-            {"Name": "Attack: Flail attack", "Damage": "3d6", "Type": "Piercing"},
+            {"Name": "Attack: Flail attack", "Dice": "3d6", "Type": "Piercing"},
             {"Name": "Spell: Revivify", "Description": "Revive another player"},
-            {"Name": "Spell: Healing Word", "Damage": "2d8", "Type": "Healing"},
-            {"Name": "Block", "Description": "Block Incoming Damage on self or other player"}
+            {"Name": "Spell: Healing Word", "Dice": "2d8", "Type": "Healing"},
+            {"Name": "Block", "Description": "Block Incoming Damage on self or other player"},
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing"}
         ]
     },
     {
@@ -38,10 +44,12 @@
         "Hit Points": 48,
         "Armor Class": 20,
         "Stamina": 3,
+        "Spell slots": 0,
         "Actions": [
-            {"Name": "Attack: Sword attack", "Damage": "4d6", "Type": "Slashing"},
-            {"Name": "Attack: Pommel strike", "Damage": "2d4", "Type": "Blunt"},
-            {"Name": "Block", "Description": "Block Incoming Damage on self or other player"}
+            {"Name": "Attack: Sword attack", "Dice": "4d6", "Type": "Slashing"},
+            {"Name": "Attack: Pommel strike", "Dice": "2d4", "Type": "Blunt"},
+            {"Name": "Block", "Description": "Block Incoming Damage on self or other player"},
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing"}
         ]
     },
     {
@@ -49,10 +57,12 @@
         "Hit Points": 44,
         "Armor Class": 15,
         "Stamina": 4,
+        "Spell slots": 0,
         "Actions": [
-            {"Name": "Attack: Dagger attack", "Damage": "4d4", "Type": "Slashing"},
-            {"Name": "Attack: Stealth attack", "Damage": "4d6", "Type": "Slashing"},
-            {"Name": "Cantrip: Fire Bolt", "Damage": "3d4", "Type": "Fire"}
+            {"Name": "Attack: Dagger attack", "Dice": "4d4", "Type": "Slashing"},
+            {"Name": "Attack: Stealth attack", "Dice": "4d6", "Type": "Slashing"},
+            {"Name": "Cantrip: Fire Bolt", "Dice": "3d4", "Type": "Fire"},
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing"}
         ]
     },
     {
@@ -60,10 +70,12 @@
         "Hit Points": 46,
         "Armor Class": 15,
         "Stamina": 4,
+        "Spell slots": 3,
         "Actions": [
-            {"Name": "Attack: Ranged attack", "Damage": "3d6", "Type": "Piercing"},
-            {"Name": "Spell: Ensnaring strike", "Damage": "2d4", "Type": "Piercing"},
-            {"Name": "Spell: Healing word", "Damage": "2d8", "Type": "Healing"}
+            {"Name": "Attack: Ranged attack", "Dice": "3d6", "Type": "Piercing"},
+            {"Name": "Spell: Ensnaring strike", "Dice": "2d4", "Type": "Piercing"},
+            {"Name": "Spell: Healing word", "Dice": "2d8", "Type": "Healing"},
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing"}
         ]
     }
 ]
