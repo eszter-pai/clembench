@@ -6,7 +6,7 @@ class Adventurer(Player):
         super().__init__(model_name)
         self.player: str = player
 
-        #the player's chosen class
+        #the player's given or chosen class, if the player chose class, it initialized with null.
         self.clss: str = clss
 
         self.history: List = []
@@ -23,7 +23,6 @@ class DungeonMaster(Player):
     def __init__(self, model_name: str, player: str, clss: str):
         super().__init__(model_name)
 
-        #the player's assigned monster
         self.player:str = player
 
         #the given mosnter
@@ -32,6 +31,9 @@ class DungeonMaster(Player):
         self.history: List = []
 
     def _custom_response(self, messages, turn_idx) -> str:
-        
         """Return a mock message with the suitable format."""
-        return f"MOVE: to A2\nACTION: Attack: Fire Touch on Player A in A1\nDAMAGE: 21"
+        if turn_idx == 1:
+            return "Dungeon Master"
+        
+        else:
+            return f"MOVE: to A2\nACTION: Attack: Fire Touch on Player A in A1\nDAMAGE: 21"

@@ -20,13 +20,11 @@ class DnD(GameMaster):
         super().__init__(GAME_NAME, experiment, player_backends)
 
 
-        #all levels are in dnd/in/resources/levels.txt
+        # all levels are in dnd/in/resources/levels.txt
         self.levels = experiment['name']
         self.model_a = player_backends[0]
         self.model_b = player_backends[0]
         self.model_dm = player_backends[1] 
-
-
 
         # initialise attributes that will be used for the evaluation scores
         self.max_turn = 15
@@ -39,34 +37,30 @@ class DnD(GameMaster):
 
         # initialize players' classes: 
         # if GM does not give them class, then its null
-        self.player_a_class = game_instance['player_a_class']
-        self.player_B_class = game_instance['player_b_class']
-        self.player_dm_monster = game_instance['boss_dict']['name']
+        player_a_class = game_instance['player_a_class']
+        player_B_class = game_instance['player_b_class']
+        player_dm_monster = game_instance['boss_dict']['Class Name']
 
-        #instantiate players
-        self.player_a = Adventurer(self.model_a, "A", self.player_a_class)
-        self.player_b = Adventurer(self.model_b, "B", self.player_B_class)
-        self.player_dm = DungeonMaster(self.model_dm, "DM", self.player_dm_monster)
+        # instantiate players
+        self.player_a = Adventurer(self.model_a, "A", player_a_class)
+        self.player_b = Adventurer(self.model_b, "B", player_B_class)
+        self.player_dm = DungeonMaster(self.model_dm, "DM", player_dm_monster)
 
-
+        # all classes/boss of each player: self.player_a.clss | self.player_b.clss | self.player_dm.clss
 
         prompt_player_a = game_instance['prompt_player_a']
         prompt_player_b = game_instance['prompt_player_b']
         prompt_dm = game_instance['prompt_dm']
 
-        self.player_a_class = game_instance['player_a_class']
 
-
-
-
-        #initialize game variable
+        # initialize game variable
         self.current_turn: int = 0
-        #the potions are shared among the heroes
+        # the potions are shared among the heroes
         self.potions = 7
         
         self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
 
-        #log the details of players
+        # log the details of players
         self.log_players({
             'GM': 'Game master for DnD',
             'Player 1': f'Adventurer A: {self.model_a}',
@@ -80,13 +74,16 @@ class DnD(GameMaster):
 
     def initiate(self, prompt_player_a, prompt_player_b, prompt_player_dm):
 
-        #append the initial message of each plaeyr to their history
+        # always call log_next_turn when a new turn starts
+        self.log_next_turn()
+
+        # append the initial message of each player to their history
         self.player_a.history.append({'role': 'user', 'content': prompt_player_a})
         self.player_b.history.append({'role': 'user', 'content': prompt_player_b})
         self.player_dm.history.append({'role': 'user', 'content': prompt_player_dm})
 
 
-        #log the messages as events for the transcriptions
+        # log the messages as events for the transcriptions
         action = {'type': 'send message', 'content': prompt_player_a}
         self.log_event(from_='GM', to='Player 1', action=action)
         action = {'type': 'send message', 'content': prompt_player_b}
@@ -101,8 +98,12 @@ class DnD(GameMaster):
     def play(self) -> None:
         while self.does_game_proceed():
             self.current_turn += 1
+
+            # always call log_next_turn when a new turn starts
             self.log_next_turn()
             self.turn()
+
+
         if self.complete_turns == self.max_turn:
             # log a message informing that the game was successfuly played
             action = {'type': 'info', 'content': 'game successful'}
@@ -115,7 +116,7 @@ class DnD(GameMaster):
 
 
     def does_game_proceed(self) -> None:
-        #does the game continue
+        # does the game continue
         if self.current_turn < 15 and not self.aborted:
             return True
         else:
@@ -126,15 +127,17 @@ class DnD(GameMaster):
 
         if player == 'a':            
 
-            #API call (or get a programmatic response) from player a
+            # API call (or get a programmatic response) from player a
             prompt_a, raw_answer_a, answer_a = self.player_a(self.player_a.history,
                                                     self.current_turn)
-            #API call to the records
+            # API call to the records
             action = {'type': 'get message', 'content': answer_a}
-            self.log_event(from_='Player 1', to='GM', action=action,
+            self.log_event(from_='Player A', to='GM', action=action,
                         call=(copy.deepcopy(prompt_a), raw_answer_a))
             
             #reply to its own memory
+
+            return answer_a
 
 
         if player == 'b':
@@ -144,23 +147,27 @@ class DnD(GameMaster):
                                                     self.current_turn)
             #API call to the records
             action = {'type': 'get message', 'content': answer_b}
-            self.log_event(from_='Player 1', to='GM', action=action,
+            self.log_event(from_='Player B', to='GM', action=action,
                         call=(copy.deepcopy(prompt_b), raw_answer_b))
             
             #reply to its own memory
+
+            return answer_b
 
 
         else:
             #for dm
             #API call (or get a programmatic response) from player a
-            prompt, raw_answer, answer = self.player_a(self.player_a.history,
+            prompt, raw_answer, answer = self.player_dm(self.player_dm.history,
                                                     self.current_turn)
             #API call to the records
             action = {'type': 'get message', 'content': answer}
-            self.log_event(from_='Player 1', to='GM', action=action,
+            self.log_event(from_='Player DM', to='GM', action=action,
                         call=(copy.deepcopy(prompt), raw_answer))
             
             #reply to its own memory
+        
+            return answer
             
 
     #def _check_validity(self, answer: str) -> bool:
@@ -169,17 +176,29 @@ class DnD(GameMaster):
     def turn(self) -> None:
         #get A, B, and DM's response
         answer_a = self.get_utterance('a')
-        answer_a = self.get_utterance('b')
-        answer_a = self.get_utterance('dm')
+        answer_b = self.get_utterance('b')
+        answer_dm = self.get_utterance('dm')
 
         #check A's response's validity
-        is_valid_turn = self._check_validity(answer_a)
-        if not is_valid_turn:
+       # is_valid_turn = self._check_validity(answer_a)
+       # if not is_valid_turn:
             #stop game
-            return None
+        return None
         
         #also add the reply to the transcript
+
+        action = {'type': 'send message', 'content': answer_a}
+        self.log_event(from_='GM', to='Player 2', action=action)
         
+    def _append_utterance(self, utterance: str, player: str, role: str) -> None:
+        """Add an utterance to the history of a player (dnd game specific)."""
+        assert player in ('a', 'b', 'dm')
+        if player == 'a':
+            self.player_a.history.append({'role': role, 'content': utterance})
+        elif player == 'b':
+            self.player_b.history.append({'role': role, 'content': utterance})
+        else:
+            self.player_dm.history.append({'role': role, 'content': utterance})
 
 
 # always add the GameBenchmark child with this structure
