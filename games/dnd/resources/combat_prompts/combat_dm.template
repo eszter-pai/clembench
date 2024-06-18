@@ -1,0 +1,22 @@
+Here is your dungeon: 
+
+You are in $position_boss
+Player A is in $position_a
+Player B is in $position_b
+The cells that are blocked: $blocked_cells 
+
+Player A deals $damage_a on your boss.
+Player B deals $damage_b on your boss.
+
+Please select a move and an action: 
+Move: 0 - $stamina_boss steps
+Action: $action_list_boss
+
+Roll the given dice to determine the result of your action. For example, if your chosen action has “Dice: 3d4”, roll 3d4. The sum of the individual rolls is the result of your dice roll. For example, if you roll 3, 4, and 5, then your dice roll result is 12. Remember that you must meet the conditions for an action in order to perform it, if there is one. Remember that if you move 0 steps, you must restate your current position. For example, if you are in cell C5 and choose to stay in place, you must say “MOVE: C5”.
+
+Answer only with the following format: 
+
+MOVE: <position>
+ACTION: <an action> 
+TARGET: <target of your action> in <target’s position>
+ROLL: <dice roll result, give only the sum and do not give individual roll results>

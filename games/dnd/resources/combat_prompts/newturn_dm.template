@@ -1,0 +1,45 @@
+This is the end of turn number $turn_count. These were the actions taken:
+
+Player A targets $target_a with $action_a and rolls $roll_a.
+Player B targets $target_b with $action_b and rolls $roll_b.
+$name_boss targets $target_boss with $action_boss and rolls $roll_boss.
+
+Here is everyone's profile after this turn.
+
+Player A
+Class: $class_a
+Hit Points: $hp_a
+Armor Class: $ac_a
+Stamina: $stamina_a
+Position: $position_a
+
+Player B
+Class: $class_b
+Hit Points: $hp_b
+Armor Class: $ac_b
+Stamina: $stamina_b
+Position: $position_b
+
+Boss
+Name: $name_boss
+Hit Points: $hp_boss
+Armor Class: $ac_boss
+Stamina: $stamina_boss
+Position: $position_boss
+Resistance: $resistance_boss
+
+A new turn has begun.
+
+Player A deals $damage_a on your boss.
+Player B deals $damage_b on your boss.
+
+Please select a move and an action: 
+Move: 0 - $stamina_boss steps
+Action: $action_list_boss
+
+Answer only with the following format: 
+
+MOVE: <position>
+ACTION: <an action> 
+TARGET: <target of your action> in <target’s position>
+ROLL: <dice roll result, give only the sum and do not give individual roll results>

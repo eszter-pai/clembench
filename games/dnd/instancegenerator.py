@@ -166,12 +166,6 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
                     #generate instance boss based on the exp-difficulty
                     instance['boss_dict'] = generate_boss(difficulty)
 
-                    ####### RESPONSES ####### 
-                    # first response must be player's class or role
-                    instance['player_a_first_resp'] = player_a_cls
-                    instance['player_b_first_resp'] = player_b_cls
-                    instance['dm_first_resp'] = "Dungeon Master"
-
                     # continued responses must follow given format:
                     response_dict = {
                         'MOVE: ': '(?:[A-E][1-5]|stay)',

@@ -1,4 +1,5 @@
 import copy
+import re
 from typing import List, Dict, Tuple
 
 import clemgame.metrics as ms
@@ -20,7 +21,7 @@ class DnD(GameMaster):
         super().__init__(GAME_NAME, experiment, player_backends)
 
 
-        # all levels are in dnd/in/resources/levels.txt
+        # all levels are in dnd/in/resources/basegamelevels.txt
         self.levels = experiment['name']
         self.model_a = player_backends[0]
         self.model_b = player_backends[0]
@@ -56,7 +57,22 @@ class DnD(GameMaster):
         # initialize game variable
         self.current_turn: int = 0
         # the potions are shared among the heroes
-        self.potions = 7
+        self.potions = 5    # RONJA'S NOTE: i think 7 is a bit much .. 
+                            # maybe we should tie them to difficulty / instance?
+
+        # keep player's dicts & response format dict to access later
+        self.player_a_dict = game_instance['player_a_dict']
+        self.player_b_dict = game_instance['player_b_dict']
+        self.boss_dict = game_instance['boss_dict']
+        self.response_dict = game_instance['response_format']
+
+        # initialize hp counts which must be updated throughout game
+        self.player_a_hp = game_instance['player_a_dict']['Hit Points']
+        self.player_b_hp = game_instance['player_b_dict']['Hit Points']
+        self.boss_hp = game_instance['boss_dict']['Hit Points']
+        # initialize spell slots which may be updated throughout game
+        self.player_a_slots = game_instance['player_a_dict']['Spell slots']
+        self.player_b_slots = game_instance['player_b_dict']['Spell slots']
         
         self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
 
@@ -117,6 +133,12 @@ class DnD(GameMaster):
 
     def does_game_proceed(self) -> None:
         # does the game continue
+        if self.current_turn >= self.max_turns: # if max turns reached
+            self.log_to_self("max turns reached", str(self.max_turns))
+            return False
+        if self.invalid_response:               # if invalid response - reprompt??
+            self.log_to_self("invalid response", "abort game")
+            return False
         if self.current_turn < 15 and not self.aborted:
             return True
         else:
@@ -168,9 +190,120 @@ class DnD(GameMaster):
             #reply to its own memory
         
             return answer
-            
+    
+    def _check_adjacency(self, person_a: str, person_b: str):
+        """ Check if two players are in adjacent positions in the dungeon 
+            to satisfy the adjacency condition."""
 
-    #def _check_validity(self, answer: str) -> bool:
+        # define dungeon layout
+        rows = 'ABCDE'
+        cols = '12345'
+
+        # get row & column indeces
+        row_a, col_a = rows.index(person_a[0]), cols.index(person_a[1])
+        row_b, col_b = rows.index(person_b[0]), cols.index(person_b[1])
+
+        # check if the positions are adjacent (not equal)
+        if not person_a == person_b:    # NOTE: can't be in same position anyway -> redundant (but for safety)
+            # players are adjacent if they difference between their row & column indeces is exactly 0 & 1
+            if abs(row_a - row_b) <= 1 and abs(col_a - col_b) <= 1:
+                return True
+            
+        return False
+
+    def _on_parse_response(self, player, utterance: str):
+        """Assess whether the player's response needs to be edited before it is logged."""
+    
+        return False, utterance
+
+    def _validate_player_response(self, player, utterance: str):
+        """
+        Parse the player's response according to the instance's given response format.
+        Check for violations of the game rules.
+        """
+        lines = utterance.split('\n')
+        response_tags = list(self.response_dict)
+        raw_response = []
+
+        for i in range(len(lines)):
+            tag = response_tags[i]
+            pattern = self.response_dict[tag]
+            line_content = lines[i].replace(tag, '')
+            raw_response.append(line_content)
+
+            # check if tagged correctly
+            if not lines[i].startswith(tag):
+                self.invalid_response = True
+                return False
+            # check if content matches regex
+            if not re.match(pattern, line_content):
+                self.invalid_response = True
+                return False
+            
+        # log if format was valid 
+        self.log_to_self("valid format", "continue")
+
+        # now check if response follows game rules
+        if player == self.player_a:
+            player_dict = self.player_a_dict
+            player_slots = self.player_a_slots
+        elif player == self.player_b:
+            player_dict = self.player_b_dict
+            player_slots = self.player_b_slots
+        elif player == self.player_dm:
+            player_dict = self.boss_dict
+            player_slots = 0
+
+        action_lst = player_dict['Actions']
+        player_pos = raw_response[0]
+        action = raw_response[1]
+        target = raw_response[2].split(sep=' ')[0]
+        target_pos = raw_response[2].split(sep=' ')[2]
+
+        # check if input is contained in player's list of possible actions
+        for action_dict in action_lst:
+            if action_dict['Name'] == action:
+                condition = action_dict['Condition']
+                if not condition == "None":
+                    # spell slot condition requires at least spell slot remaining
+                    if condition == "spell slot" and player_slots == 0:
+                        self.log_to_self("condition not met")   # NOTE: logging optional (?)
+                        self.invalid_response = True
+                        return False
+                    # adjacency condition requires player & target be in adjacent positions
+                    elif condition == "adjacency":
+                        if not target=="self":
+                            if not self._check_adjacency(player_pos, target_pos):
+                                self.log_to_self("condition not met")
+                                self.invalid_response = True
+                                return False
+                    # potions condition requires potions remaining
+                    elif condition == "potions" and self.potions == 0:
+                            self.log_to_self("condition not met")
+                            self.invalid_response = True
+                            return False
+                    
+        # some special cases
+        if action=="Spell: Revivify":   # revivify must be aimed at a dead adventurer
+            if player==self.player_a:
+                if not target=='Player B' and not self.player_b_hp==0:
+                    self.invalid_response = True
+                    return False
+            elif player==self.player_b:
+                if not target=='Player A' and not self.player_a_hp==0:
+                    self.invalid_response = True
+                    return False
+        
+        if action=="Potion: Use healing potion":    # cannot use potions on someone else
+            if not target=='self':
+                if player==self.player_a and not target=='Player A':
+                    self.invalid_response = True
+                    return False
+                elif player==self.player_b and not target=='Player B':
+                    self.invalid_response = True
+                    return False
+        
+        return True 
 
 
     def turn(self) -> None:
@@ -180,7 +313,9 @@ class DnD(GameMaster):
         answer_dm = self.get_utterance('dm')
 
         #check A's response's validity
-       # is_valid_turn = self._check_validity(answer_a)
+
+        #if not turn_idx == 1: NOTE: at turn 1 there is a special format !!!
+        is_valid_turn = self._validate_player_response(player=self.player_a, utterance=answer_a)
        # if not is_valid_turn:
             #stop game
         return None
