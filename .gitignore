@@ -205,4 +205,5 @@ instances.ipynb
 docs/howto_prototype_games.ipynb
 dnd_instances.ipynb
 clemgame/__init__.py
+clemgame/clemgame.py
 game.ipynb
