@@ -2,7 +2,7 @@ This is the end of turn number $turn_count. These were the actions taken:
 
 Player A targets $target_a with $action_a and rolls $roll_a.
 Player B targets $target_b with $action_b and rolls $roll_b.
-$name_boss targets $target_boss with $action_boss and rolls $roll_boss.
+The boss targets $target_boss with $action_boss and rolls $roll_boss.
 
 Here is everyone's profile after this turn.
 
@@ -15,12 +15,9 @@ $player_b_stats
 Boss
 $boss_stats
 
-A new turn has begun.
+Now a new turn begins. $additional_info
 
-Player A targets $target_a and rolls $roll_a.
-Player B targets $target_b and rolls $roll_b.
-
-Please select a move and an action: 
+You are $player. Please select a move and an action: 
 Move: 0 - $stamina steps
 Action: $action_list
 

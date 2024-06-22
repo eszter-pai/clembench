@@ -1,9 +1,10 @@
 import copy
 import re
+import string
 from typing import List, Dict, Tuple
 
 import clemgame.metrics as ms
-from clemgame.clemgame import GameMaster, GameBenchmark
+from clemgame.clemgame import GameMaster, GameBenchmark, DialogueGameMaster
 from clemgame import get_logger
 
 from games.dnd.players import Adventurer, DungeonMaster
@@ -28,13 +29,15 @@ class DnD(GameMaster):
         self.model_dm = player_backends[1] 
 
         # initialise attributes that will be used for the evaluation scores
-        self.max_turn = 15
+        self.max_turns = 15
         self.aborted: bool = False
         self.lose: bool = False
         self.complete_turns: int = 0
 
 
     def setup(self, **game_instance)-> None:
+
+        logger.info("_on_setup")
 
         # initialize players' classes: 
         # if GM does not give them class, then its null
@@ -145,13 +148,13 @@ class DnD(GameMaster):
 
         # ESZ's NOTE: log_to_self is not initialized
         # does the game continue
-    #    if self.current_turn >= self.max_turn: # if max turns reached 
+    #    if self.current_turn > self.max_turns: # if max turns reached 
     #        self.log_to_self("max turns reached", str(self.max_turns))
     #        return False
     #    if self.invalid_response:               # if invalid response - reprompt??
     #        self.log_to_self("invalid response", "abort game")
     #        return False
-        if self.current_turn < 15 and not self.aborted:
+        if self.current_turn <= self.max_turns and not self.aborted:
             return True
         else:
             return False

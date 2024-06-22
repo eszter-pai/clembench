@@ -1,12 +1,12 @@
-Here is your dungeon: 
+This is the beginning of turn $num_turn of combat.
 
 You are in $position_boss
 Player A is in $position_a
 Player B is in $position_b
 The cells that are blocked: $blocked_cells 
 
-Player A deals $damage_a on your boss.
-Player B deals $damage_b on your boss.
+Player A targets $target_a and rolls $roll_a.
+Player B targets $target_b and rolls $roll_b.
 
 Please select a move and an action: 
 Move: 0 - $stamina_boss steps

@@ -1,34 +1,23 @@
-Here is your dungeon: 
+This is the beginning of turn $num_turn of combat.
 
-You are in $position_b
-Player A is in $position_a
+You are in $position
+The other adventurer is in $position_2
 The cells that are blocked: $blocked_cells 
 
 Here is the boss: 
-Position: $position_boss
-Name: $name_boss
-Size: $size_boss
-Hit Points: $hp_boss
-Armor Class: $ac_boss
-Stamina: $stamina_boss
-Resistance: $resistsance_boss
-
-Player A made the following choices: 
-Move: $move_a
-Action: $action_a
-Roll: $roll_a
-Player A's Hit Points: $current_hp_a / $hp_a
-Boss’ Hit Points: $current_hp_boss / $hp_boss
+$boss_info
 
 This is your profile: 
-Class: $class_b
-Hit Points: $hp_b
-Armor Class: $ac_b
-Stamina: $stamina_b
+Class: $class
+Hit Points: $hp
+Armor Class: $ac
+Stamina: $stamina
 
-You are Player B. Please select a move and an action: 
-Move: 0 - $stamina_b steps
-Action: $action_list_b
+$additional_info
+
+You are $player. Please select a move and an action: 
+Move: 0 - $stamina steps
+Action: $action_list
 
 Roll the given dice to determine the result of your action. For example, if your chosen action has “Dice: 3d4”, roll 3d4. The sum of the individual rolls is the result of your dice roll. For example, if you roll 3, 4, and 5, then your dice roll result is 12. Remember that you must meet the conditions for an action in order to perform it, if there is one. Remember that if you move 0 steps, you must restate your current position. For example, if you are in cell C5 and choose to stay in place, you must say “MOVE: C5”.
 

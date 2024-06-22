@@ -113,6 +113,10 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
         # get initial prompt templates for adventurers and dm
         prompt_adv = self.load_template('resources/initial_prompts/game_intro_given.template')
         prompt_dm = self.load_template('resources/initial_prompts/game_intro_dm.template')
+        combat_prompt_adv = self.load_template('resources/combat_prompts/combat_adv.template')
+        combat_prompt_dm = self.load_template('resources/combat_prompts/combat_dm.template')
+        newturn_prompt_adv = self.load_template('resources/combat_prompts/newturn_adv.template')
+        newturn_prompt_dm = self.load_template('resources/combat_prompts/newturn_dm.template')
 
         # experiment names grouped by whether player chooses their class or not
         magic_classes = ['Wizard', 'Sorcerer']
@@ -155,12 +159,16 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
                     instance['prompt_player_b'] = string.Template(prompt_adv).substitute(
                         player_class=player_b_cls)
                     instance['prompt_dm'] = prompt_dm
+                    instance['combat_prompt_adv'] = combat_prompt_adv
+                    instance['combat_prompt_dm'] = combat_prompt_dm
+                    instance['newturn_prompt_adv'] = newturn_prompt_adv
+                    instance['newturn_prompt_dm'] = newturn_prompt_dm
 
                     # store players' info
                     for dict in class_info:
                         if dict['Class Name'] == player_a_cls:
                             instance['player_a_dict'] = dict
-                        elif dict['Class Name'] == player_b_cls:
+                        if dict['Class Name'] == player_b_cls:
                             instance['player_b_dict'] = dict
 
                     #generate instance boss based on the exp-difficulty
