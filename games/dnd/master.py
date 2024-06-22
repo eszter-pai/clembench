@@ -53,6 +53,9 @@ class DnD(GameMaster):
         prompt_player_b = game_instance['prompt_player_b']
         prompt_dm = game_instance['prompt_dm']
 
+        # ESZ's NOTE: perhaps we need to put every single template into game instances, ex. self.combat_temp_a
+        # so we can use replace function and call api: combat_prompt_a = combat_prompt_temp.replace("$position_a$", position)....
+
 
         # initialize game variable
         self.current_turn: int = 0
@@ -62,17 +65,17 @@ class DnD(GameMaster):
 
         # keep player's dicts & response format dict to access later
         self.player_a_dict = game_instance['player_a_dict']
-        self.player_b_dict = game_instance['player_b_dict']
+    #    self.player_b_dict = game_instance['player_b_dict'] # ESZ's NOTE: noticed a instance does not have player_b_dict, game_id = 2 and both are wizard
         self.boss_dict = game_instance['boss_dict']
         self.response_dict = game_instance['response_format']
 
         # initialize hp counts which must be updated throughout game
         self.player_a_hp = game_instance['player_a_dict']['Hit Points']
-        self.player_b_hp = game_instance['player_b_dict']['Hit Points']
+    #    self.player_b_hp = game_instance['player_b_dict']['Hit Points']
         self.boss_hp = game_instance['boss_dict']['Hit Points']
         # initialize spell slots which may be updated throughout game
         self.player_a_slots = game_instance['player_a_dict']['Spell slots']
-        self.player_b_slots = game_instance['player_b_dict']['Spell slots']
+    #    self.player_b_slots = game_instance['player_b_dict']['Spell slots']
         
         self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
 
@@ -92,6 +95,7 @@ class DnD(GameMaster):
 
         # always call log_next_turn when a new turn starts
         self.log_next_turn()
+        self.invalid_response = False
 
         # append the initial message of each player to their history
         self.player_a.history.append({'role': 'user', 'content': prompt_player_a})
@@ -102,8 +106,10 @@ class DnD(GameMaster):
         # log the messages as events for the transcriptions
         action = {'type': 'send message', 'content': prompt_player_a}
         self.log_event(from_='GM', to='Player 1', action=action)
+
         action = {'type': 'send message', 'content': prompt_player_b}
         self.log_event(from_='GM', to='Player 2', action=action)
+
         action = {'type': 'send message', 'content': prompt_player_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
 
@@ -117,7 +123,11 @@ class DnD(GameMaster):
 
             # always call log_next_turn when a new turn starts
             self.log_next_turn()
-            self.turn()
+
+            if  self.current_turn == 1:
+                self.turn()
+            else:
+                self.combat_turn()
 
 
         if self.complete_turns == self.max_turn:
@@ -132,13 +142,15 @@ class DnD(GameMaster):
 
 
     def does_game_proceed(self) -> None:
+
+        # ESZ's NOTE: log_to_self is not initialized
         # does the game continue
-        if self.current_turn >= self.max_turns: # if max turns reached
-            self.log_to_self("max turns reached", str(self.max_turns))
-            return False
-        if self.invalid_response:               # if invalid response - reprompt??
-            self.log_to_self("invalid response", "abort game")
-            return False
+    #    if self.current_turn >= self.max_turn: # if max turns reached 
+    #        self.log_to_self("max turns reached", str(self.max_turns))
+    #        return False
+    #    if self.invalid_response:               # if invalid response - reprompt??
+    #        self.log_to_self("invalid response", "abort game")
+    #        return False
         if self.current_turn < 15 and not self.aborted:
             return True
         else:
@@ -154,7 +166,7 @@ class DnD(GameMaster):
                                                     self.current_turn)
             # API call to the records
             action = {'type': 'get message', 'content': answer_a}
-            self.log_event(from_='Player A', to='GM', action=action,
+            self.log_event(from_='Player 1', to='GM', action=action,
                         call=(copy.deepcopy(prompt_a), raw_answer_a))
             
             #reply to its own memory
@@ -169,7 +181,7 @@ class DnD(GameMaster):
                                                     self.current_turn)
             #API call to the records
             action = {'type': 'get message', 'content': answer_b}
-            self.log_event(from_='Player B', to='GM', action=action,
+            self.log_event(from_='Player 2', to='GM', action=action,
                         call=(copy.deepcopy(prompt_b), raw_answer_b))
             
             #reply to its own memory
@@ -307,23 +319,73 @@ class DnD(GameMaster):
 
 
     def turn(self) -> None:
-        #get A, B, and DM's response
+        #get A's response
         answer_a = self.get_utterance('a')
-        answer_b = self.get_utterance('b')
-        answer_dm = self.get_utterance('dm')
-
         #check A's response's validity
 
         #if not turn_idx == 1: NOTE: at turn 1 there is a special format !!!
-        is_valid_turn = self._validate_player_response(player=self.player_a, utterance=answer_a)
-       # if not is_valid_turn:
+    #    is_valid_turn = self._validate_player_response(player=self.player_a, utterance=answer_a)
+
+    #    if not is_valid_turn:
             #stop game
-        return None
+    #        return None
         
         #also add the reply to the transcript
 
         action = {'type': 'send message', 'content': answer_a}
+        self.log_event(from_='GM', to='Player 1', action=action)
+
+        #get B's response
+        answer_b = self.get_utterance('b')
+    #    is_valid_turn = self._validate_player_response(player=self.player_a, utterance=answer_b)
+    #    if not is_valid_turn:
+        #stop game
+    #        return None
+        
+        action = {'type': 'send message', 'content': answer_b}
         self.log_event(from_='GM', to='Player 2', action=action)
+
+        #get DM's response
+        answer_dm = self.get_utterance('dm')
+    #    is_valid_turn = self._validate_player_response(player=self.player_a, utterance=answer_dm)
+    #    if not is_valid_turn:
+        #stop game
+    #        return None
+        action = {'type': 'send message', 'content': answer_dm}
+        self.log_event(from_='GM', to='Player DM', action=action)
+
+
+    def combat_turn(self) -> None:
+
+        # assume that the combat prompt temp is inside game instance, and positions of players and dungeon layout:
+        # put values inside the template that GM gives to player a in the first turn
+        combat_prompt_a = self.combat_prompt_temp.replace("$position_a", position_a)
+        combat_prompt_a = self.combat_prompt_temp.replace("$position_b", position_b)
+        combat_prompt_a = self.combat_prompt_temp.replace("$blocked_cells ", blocked_cells)
+        combat_prompt_a = self.combat_prompt_temp.replace("$position_boss", position_dm)
+        combat_prompt_a = self.combat_prompt_temp.replace("$name_boss", self.boss_dict["Class Name"] )
+        combat_prompt_a = self.combat_prompt_temp.replace("$size_boss",  self.boss_dict["Size"])
+        combat_prompt_a = self.combat_prompt_temp.replace("$hp_boss",  self.boss_dict["Hit Points"])
+        combat_prompt_a = self.combat_prompt_temp.replace("$ac_boss",  self.boss_dict["Armor Class"])
+        combat_prompt_a = self.combat_prompt_temp.replace("$stamina_boss",  self.boss_dict["Stamina"])
+        combat_prompt_a = self.combat_prompt_temp.replace("$resistsance_boss",  self.boss_dict["Resistance"])
+        combat_prompt_a = self.combat_prompt_temp.replace("$class_a", self.player_a_dict['Class Name'])
+        combat_prompt_a = self.combat_prompt_temp.replace("$ac_a", self.player_a_dict['Armor Class'])
+        combat_prompt_a = self.combat_prompt_temp.replace("$stamina_a", self.player_a_dict['Stamina'])
+        # make action list into a single string:
+        action_a_string = ""
+        for item in self.player_a_dict['Actions']:
+            for key, value in item.items():
+                action_a_string += f"{key}: {value}\n"
+            action_a_string += ".....\n"
+
+        combat_prompt_a = self.combat_prompt_temp.replace("$action_list_a", action_a_string)
+
+        #ESZ's NOTE: for prompt b and prompt dm is gonna be the similar code block
+        
+        
+
+
         
     def _append_utterance(self, utterance: str, player: str, role: str) -> None:
         """Add an utterance to the history of a player (dnd game specific)."""
