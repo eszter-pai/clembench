@@ -68,19 +68,24 @@ class DnD(GameMaster):
 
         # keep player's dicts & response format dict to access later
         self.player_a_dict = game_instance['player_a_dict']
-    #    self.player_b_dict = game_instance['player_b_dict'] # ESZ's NOTE: noticed a instance does not have player_b_dict, game_id = 2 and both are wizard
+        self.player_b_dict = game_instance['player_b_dict'] # ESZ's NOTE: noticed a instance does not have player_b_dict, game_id = 2 and both are wizard
         self.boss_dict = game_instance['boss_dict']
         self.response_dict = game_instance['response_format']
 
         # initialize hp counts which must be updated throughout game
         self.player_a_hp = game_instance['player_a_dict']['Hit Points']
-    #    self.player_b_hp = game_instance['player_b_dict']['Hit Points']
+        self.player_b_hp = game_instance['player_b_dict']['Hit Points']
         self.boss_hp = game_instance['boss_dict']['Hit Points']
         # initialize spell slots which may be updated throughout game
         self.player_a_slots = game_instance['player_a_dict']['Spell slots']
-    #    self.player_b_slots = game_instance['player_b_dict']['Spell slots']
+        self.player_b_slots = game_instance['player_b_dict']['Spell slots']
         
         self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
+
+        # NOTE: DUMMY SPAWN POSITIONS TO TEST OTHER THINGS
+        self.player_a_position = "A1"
+        self.player_b_position = "A2"
+        self.boss_position = "D4"
 
         # log the details of players
         self.log_players({
@@ -179,7 +184,7 @@ class DnD(GameMaster):
 
         if player == 'b':
 
-            #API call (or get a programmatic response) from player a
+            #API call (or get a programmatic response) from player b
             prompt_b, raw_answer_b, answer_b = self.player_b(self.player_b.history,
                                                     self.current_turn)
             #API call to the records
@@ -194,7 +199,7 @@ class DnD(GameMaster):
 
         else:
             #for dm
-            #API call (or get a programmatic response) from player a
+            #API call (or get a programmatic response) from dm
             prompt, raw_answer, answer = self.player_dm(self.player_dm.history,
                                                     self.current_turn)
             #API call to the records
@@ -206,23 +211,29 @@ class DnD(GameMaster):
         
             return answer
     
-    def _check_adjacency(self, person_a: str, person_b: str):
-        """ Check if two players are in adjacent positions in the dungeon 
-            to satisfy the adjacency condition."""
+    def _check_move(self, n: int, pos_1: str, pos_2: str):
+        """ Check if two positions are n or less steps away from each other. 
+            Can be used with n=1 to check the adjacency condition."""
 
         # define dungeon layout
         rows = 'ABCDE'
         cols = '12345'
 
         # get row & column indeces
-        row_a, col_a = rows.index(person_a[0]), cols.index(person_a[1])
-        row_b, col_b = rows.index(person_b[0]), cols.index(person_b[1])
+        row_a, col_a = rows.index(pos_1[0]), cols.index(pos_1[1])
+        row_b, col_b = rows.index(pos_2[0]), cols.index(pos_2[1])
 
-        # check if the positions are adjacent (not equal)
-        if not person_a == person_b:    # NOTE: can't be in same position anyway -> redundant (but for safety)
-            # players are adjacent if they difference between their row & column indeces is exactly 0 & 1
-            if abs(row_a - row_b) <= 1 and abs(col_a - col_b) <= 1:
+        # check if absolute difference between rows & columns <= n
+        # in which case positions are within n steps away from each other
+        # (since diagonal movement is not allowed)
+
+        if not pos_1 == pos_2:  # should not feed same position in anyway! 
+                                # this is only for checking the adjacency condition
+            if abs(row_a - row_b) + abs(col_a - col_b) <= n:
                 return True
+            
+        # NOTE: this does not yet check if a blocked cell is traversed
+        # needs to be implemented in the future
             
         return False
 
@@ -262,18 +273,38 @@ class DnD(GameMaster):
         if player == self.player_a:
             player_dict = self.player_a_dict
             player_slots = self.player_a_slots
+            player_pos = self.player_a_position
         elif player == self.player_b:
             player_dict = self.player_b_dict
             player_slots = self.player_b_slots
+            player_pos = self.player_b_position
         elif player == self.player_dm:
             player_dict = self.boss_dict
             player_slots = 0
+            player_pos = self.boss_position
 
         action_lst = player_dict['Actions']
-        player_pos = raw_response[0]
+        player_move = raw_response[0]
         action = raw_response[1]
         target = raw_response[2].split(sep=' ')[0]
         target_pos = raw_response[2].split(sep=' ')[2]
+
+        # if player stayed in same position, no need to check
+        if not player_move == player_pos or not player_move == "stay":
+            # check if the move is allowed based on the player's stamina
+            n = player_dict['Stamina']
+            if self._check_move(n, player_pos, player_move):
+                # update player's position if the move is valid
+                if player == self.player_a:
+                    self.player_a_position = player_move
+                elif player == self.player_b:
+                    self.player_b_position = player_move
+                elif player == self.player_dm:
+                    self.boss_position = player_move
+            else:
+                self.log_to_self("invalid move")
+                self.invalid_response = True
+                return False
 
         # check if input is contained in player's list of possible actions
         for action_dict in action_lst:
@@ -285,10 +316,10 @@ class DnD(GameMaster):
                         self.log_to_self("condition not met")   # NOTE: logging optional (?)
                         self.invalid_response = True
                         return False
-                    # adjacency condition requires player & target be in adjacent positions
+                    # adjacency condition requires target to be within range (n=1)
                     elif condition == "adjacency":
                         if not target=="self":
-                            if not self._check_adjacency(player_pos, target_pos):
+                            if not self._check_move(n=1, pos_1=player_move, pos_2=target_pos):
                                 self.log_to_self("condition not met")
                                 self.invalid_response = True
                                 return False
@@ -362,19 +393,35 @@ class DnD(GameMaster):
 
         # assume that the combat prompt temp is inside game instance, and positions of players and dungeon layout:
         # put values inside the template that GM gives to player a in the first turn
-        combat_prompt_a = self.combat_prompt_temp.replace("$position_a", position_a)
-        combat_prompt_a = self.combat_prompt_temp.replace("$position_b", position_b)
-        combat_prompt_a = self.combat_prompt_temp.replace("$blocked_cells ", blocked_cells)
-        combat_prompt_a = self.combat_prompt_temp.replace("$position_boss", position_dm)
-        combat_prompt_a = self.combat_prompt_temp.replace("$name_boss", self.boss_dict["Class Name"] )
-        combat_prompt_a = self.combat_prompt_temp.replace("$size_boss",  self.boss_dict["Size"])
-        combat_prompt_a = self.combat_prompt_temp.replace("$hp_boss",  self.boss_dict["Hit Points"])
-        combat_prompt_a = self.combat_prompt_temp.replace("$ac_boss",  self.boss_dict["Armor Class"])
-        combat_prompt_a = self.combat_prompt_temp.replace("$stamina_boss",  self.boss_dict["Stamina"])
-        combat_prompt_a = self.combat_prompt_temp.replace("$resistsance_boss",  self.boss_dict["Resistance"])
-        combat_prompt_a = self.combat_prompt_temp.replace("$class_a", self.player_a_dict['Class Name'])
-        combat_prompt_a = self.combat_prompt_temp.replace("$ac_a", self.player_a_dict['Armor Class'])
-        combat_prompt_a = self.combat_prompt_temp.replace("$stamina_a", self.player_a_dict['Stamina'])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$position_a", self.player_a_position)
+        # combat_prompt_a = self.combat_prompt_temp.replace("$position_b", self.player_b_position)
+        # combat_prompt_a = self.combat_prompt_temp.replace("$blocked_cells ", blocked_cells)
+        # combat_prompt_a = self.combat_prompt_temp.replace("$position_boss", self.boss_position)
+        # combat_prompt_a = self.combat_prompt_temp.replace("$name_boss", self.boss_dict["Class Name"] )
+        # combat_prompt_a = self.combat_prompt_temp.replace("$size_boss",  self.boss_dict["Size"])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$hp_boss",  self.boss_dict["Hit Points"])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$ac_boss",  self.boss_dict["Armor Class"])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$stamina_boss",  self.boss_dict["Stamina"])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$resistsance_boss",  self.boss_dict["Resistance"])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$class_a", self.player_a_dict['Class Name'])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$ac_a", self.player_a_dict['Armor Class'])
+        # combat_prompt_a = self.combat_prompt_temp.replace("$stamina_a", self.player_a_dict['Stamina'])
+
+    # RONJA'S VER (updated combat prompt(s))
+
+        # combat prompt is only used for the first turn of combat! therefater, it will be the newturn prompt
+        # first, we prepare some dictionaries
+
+        # collect boss info to give players
+        boss_info = f"Position: {self.boss_position}\n"
+        for item in self.boss_dict:
+            for key, value in item.items():
+                # hide certain info from players (for now)
+                if not key == "Actions" and not key == "Difficulty":
+                    boss_info += f"{key}: {value}\n"
+
+                    ### TO BE CONTINUED
+
         # make action list into a single string:
         action_a_string = ""
         for item in self.player_a_dict['Actions']:
