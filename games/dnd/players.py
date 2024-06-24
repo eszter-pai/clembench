@@ -36,4 +36,4 @@ class DungeonMaster(Player):
             return "Dungeon Master"
         
         else:
-            return f"MOVE: A2\nACTION: Attack: Fire Touch\nTARGET: Player A in A1\nROLL: 21"
+            return f"MOVE: A2\nACTION: Attack: Melee attack\nTARGET: Player A in A1\nROLL: 21"
