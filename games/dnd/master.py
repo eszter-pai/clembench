@@ -260,6 +260,7 @@ class DnD(GameMaster):
         """
         Parse the player's response according to the instance's given response format.
         Check for violations of the game rules.
+        Returns validity and if valid == True, also returns a dictionary of the response.
         """
         lines = utterance.split('\n')
         response_tags = list(self.response_dict)
@@ -274,16 +275,18 @@ class DnD(GameMaster):
             # check if tagged correctly
             if not lines[i].startswith(tag):
                 self.invalid_response = True
-                return False
+                return False, None
             # check if content matches regex
             if not re.match(pattern, line_content):
                 self.invalid_response = True
-                return False
+                return False, None
             
         # log if format was valid 
         self.log_to_self("valid format", "continue")
 
         # now check if response follows game rules
+
+        # first retrieve player-specific info
         if player == self.player_a:
             player_dict = self.player_a_dict
             player_slots = self.player_a_slots
@@ -296,29 +299,32 @@ class DnD(GameMaster):
             player_dict = self.boss_dict
             player_slots = 0
             player_pos = self.boss_position
-
+        
         action_lst = player_dict['Actions']
+
+        # fetch contents of response to compare
         player_move = raw_response[0]
         action = raw_response[1]
         target = raw_response[2].split(sep=' ')[0]
         target_pos = raw_response[2].split(sep=' ')[2]
+        roll = int(raw_response[3])
 
         # if player stayed in same position, no need to check
-        if not player_move == player_pos or not player_move == "stay":
+        if not player_move == player_pos:
             # check if the move is allowed based on the player's stamina
             n = player_dict['Stamina']
             if self._check_move(n, player_pos, player_move):
                 # update player's position if the move is valid
-                if player == self.player_a:
+                if player == "player_a":
                     self.player_a_position = player_move
-                elif player == self.player_b:
+                elif player == "player_b":
                     self.player_b_position = player_move
-                elif player == self.player_dm:
+                elif player == "player_dm":
                     self.boss_position = player_move
             else:
                 self.log_to_self("invalid move")
                 self.invalid_response = True
-                return False
+                return False, None
 
         # check if input is contained in player's list of possible actions
         for action_dict in action_lst:
@@ -329,19 +335,19 @@ class DnD(GameMaster):
                     if condition == "spell slot" and player_slots == 0:
                         self.log_to_self("condition not met")   # NOTE: logging optional (?)
                         self.invalid_response = True
-                        return False
+                        return False, None
                     # adjacency condition requires target to be within range (n=1)
                     elif condition == "adjacency":
                         if not target=="self":
                             if not self._check_move(n=1, pos_1=player_move, pos_2=target_pos):
                                 self.log_to_self("condition not met")
                                 self.invalid_response = True
-                                return False
+                                return False, None
                     # potions condition requires potions remaining
                     elif condition == "potions" and self.potions == 0:
                             self.log_to_self("condition not met")
                             self.invalid_response = True
-                            return False
+                            return False, None
                     
         # some special cases
         if action=="Spell: Revivify":   # revivify must be aimed at a dead adventurer
@@ -362,8 +368,17 @@ class DnD(GameMaster):
                 elif player==self.player_b and not target=='Player B':
                     self.invalid_response = True
                     return False
-        
-        return True 
+                
+        # if nothing was False until now, return LLM's reply to feed into next prompt
+        reply_dict = {
+            "Player" : player,
+            "Position" : player_move,
+            "Action" : action,
+            "Target" : f"{target} in {target_pos}",
+            "Roll" : roll
+        }
+
+        return True, reply_dict
 
 
     def turn(self) -> None:
@@ -428,7 +443,7 @@ class DnD(GameMaster):
             "$boss_info": boss_info,
             "$class": self.player_a.clss,
             "$hp": self.player_a_hp,
-            "$ac": self.player_a_dict["Armor Class"],
+            "$armor": self.player_a_dict["Armor Class"],
             "$stamina": self.player_a_dict["Stamina"],
             "$additional_info": "",
             "$player": "Player A",
@@ -466,7 +481,7 @@ class DnD(GameMaster):
             "$boss_info": boss_info,
             "$class": self.player_b.clss,
             "$hp": self.player_b_hp,
-            "$ac": self.player_b_dict["Armor Class"],
+            "$armor": self.player_b_dict["Armor Class"],
             "$stamina": self.player_b_dict["Stamina"],
             "$additional_info": "",
             "$player": "Player B",

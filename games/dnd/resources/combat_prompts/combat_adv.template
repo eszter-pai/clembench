@@ -10,7 +10,7 @@ $boss_info
 This is your profile: 
 Class: $class
 Hit Points: $hp
-Armor Class: $ac
+Armor Class: $armor
 Stamina: $stamina
 
 $additional_info
