@@ -87,8 +87,6 @@ class DnD(GameMaster):
         # initialize spell slots which may be updated throughout game
         self.player_a_slots = game_instance['player_a_dict']['Spell slots']
         self.player_b_slots = game_instance['player_b_dict']['Spell slots']
-        
-        self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
 
         # NOTE: DUMMY SPAWN POSITIONS TO TEST OTHER THINGS
         self.player_a_position = "A1"
@@ -111,6 +109,7 @@ class DnD(GameMaster):
     def initiate(self, prompt_player_a, prompt_player_b, prompt_player_dm):
 
         # always call log_next_turn when a new turn starts
+        self.current_turn += 1
         self.log_next_turn()
         self.invalid_response = False
 
@@ -124,6 +123,7 @@ class DnD(GameMaster):
         # log the messages as events for the transcriptions
         action = {'type': 'send message', 'content': prompt_player_a}
         self.log_event(from_='GM', to='Player 1', action=action)
+
 
         action = {'type': 'send message', 'content': prompt_player_b}
         self.log_event(from_='GM', to='Player 2', action=action)
@@ -434,12 +434,15 @@ class DnD(GameMaster):
             "$player": "Player A",
             "$action_list": action_a_string
         }
-
+        
         # combat prompt for a, first combat turn
         for key, value in replacements_a.items():
             self.combat_prompt_a = self.combat_prompt_a.replace(key, str(value))
-
+            print(str(value))
+       # print(self.combat_prompt_a)
         self.player_a.history.append({'role': 'user', 'content': self.combat_prompt_a})
+
+        print(self.combat_prompt_a)
         # also log the messages as events for the transcriptions
         action = {'type': 'send message', 'content': self.combat_prompt_a}
         self.log_event(from_='GM', to='Player 1', action=action)
