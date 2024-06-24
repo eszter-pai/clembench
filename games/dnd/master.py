@@ -296,6 +296,7 @@ class DnD(GameMaster):
                 return False, None
             # check if content matches regex
             if not re.match(pattern, line_content):
+                print(re.match(pattern, line_content))
                 self.invalid_response = True
                 return False, None
             
