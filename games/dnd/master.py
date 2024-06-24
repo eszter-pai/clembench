@@ -295,8 +295,7 @@ class DnD(GameMaster):
                 self.invalid_response = True
                 return False, None
             # check if content matches regex
-            if not re.match(pattern, line_content):
-                print(re.match(pattern, line_content))
+            if not re.match(pattern, line_content, re.IGNORECASE):
                 self.invalid_response = True
                 return False, None
             
@@ -324,8 +323,8 @@ class DnD(GameMaster):
         # fetch contents of response to compare
         player_move = raw_response[0]
         action = raw_response[1]
-        target = raw_response[2].split(sep=' ')[0]
-        target_pos = raw_response[2].split(sep=' ')[2]
+        target = ' '.join(raw_response[2].split(sep=' ')[:-2])
+        target_pos = raw_response[2].split(sep=' ')[-1]
         roll = int(raw_response[3])
 
         # if player stayed in same position, no need to check
@@ -373,26 +372,25 @@ class DnD(GameMaster):
         # some special cases
         if action=="Spell: Revivify":   # revivify must be aimed at a dead adventurer
             if player==self.player_a:
-                if not target=='Player B' and not self.player_b_hp==0:
+                if not target.lower()=='player b' and not self.player_b_hp==0:
                     self.invalid_response = True
                     return False
             elif player==self.player_b:
-                if not target=='Player A' and not self.player_a_hp==0:
+                if not target.lower()=='player a' and not self.player_a_hp==0:
                     self.invalid_response = True
                     return False
         
         if action=="Potion: Use healing potion":    # cannot use potions on someone else
-            if not target=='self':
-                if player==self.player_a and not target=='Player A':
+            if not target.lower()=='self':
+                if player==self.player_a and not target.lower()=='player a':
                     self.invalid_response = True
                     return False
-                elif player==self.player_b and not target=='Player B':
+                elif player==self.player_b and not target.lower()=='player b':
                     self.invalid_response = True
                     return False
                 
         # if nothing was False until now, return LLM's reply to feed into next prompt
         reply_dict = {
-            "Player" : player,
             "Position" : player_move,
             "Action" : action,
             "Target" : f"{target} in {target_pos}",
