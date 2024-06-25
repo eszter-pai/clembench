@@ -159,9 +159,6 @@ class DnD(GameMaster):
             # always call log_next_turn when a new turn starts
             self.log_next_turn()
 
-        #    if  self.current_turn == 1:
-        #        self.turn()
-
             if  self.current_turn == 2:
                 self.combat_turn()
             else:
@@ -173,6 +170,9 @@ class DnD(GameMaster):
             action = {'type': 'info', 'content': 'game successful'}
             self.log_event(from_='GM', to='GM', action=action)
         
+        if self.boss_hp <= 0:
+            action = {'type': 'info', 'content': 'boss defeated'}
+            self.log_event(from_='GM', to='GM', action=action)
         # log a final message saying that the game did came to an end
         action = {'type': 'info', 'content': 'end game'}
         self.log_event(from_='GM', to='GM', action=action)
@@ -188,8 +188,10 @@ class DnD(GameMaster):
     #    if self.invalid_response:               # if invalid response - reprompt??
     #        self.log_to_self("invalid response", "abort game")
     #        return False
-        if self.current_turn <= self.max_turns and not self.aborted:
+        if self.current_turn <= self.max_turns:
             return True
+        if self.boss_hp <= 0:
+            return False
         else:
             return False
         
@@ -486,7 +488,7 @@ class DnD(GameMaster):
         for item in self.boss_dict['Actions']:
             for key, value in item.items():
                 action_dm_string += f"{key}: {value}\n"
-                action_dm_string += ".....\n" 
+            action_dm_string += ".....\n" 
 
         replacements_dm = {
             "num_turn": self.current_turn,
@@ -513,37 +515,211 @@ class DnD(GameMaster):
 
     def new_turn(self) -> None:
 
-        print(self.player_a_response)
-        print(self.player_b_response)
-        print(self.player_dm_response)
         _, reply_a = self._validate_player_response(self.player_a, self.player_a_response[-1])
         _, reply_b = self._validate_player_response(self.player_b, self.player_b_response[-1])
         _, reply_dm = self._validate_player_response(self.player_dm, self.player_dm_response[-1])
 
-        print(reply_a)
 
+        # get player_a_stats and player_b_status (player position, hp and spell slots)
+        # hp calcuation:
+        a_armor = self.player_a_dict["Armor Class"]
+        b_armor = self.player_b_dict["Armor Class"]
+        dm_armor = self.boss_dict["Armor Class"]
+
+        #boss hp left
+        total_damage_done = 0 #damage done in this turn
+        if reply_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
+            total_damage_done = total_damage_done + reply_a["Roll"]
+
+        if reply_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
+            total_damage_done = total_damage_done + reply_b["Roll"]
+
+        self.boss_hp = self.boss_hp + dm_armor - total_damage_done
+
+        #player hp left:
+        if reply_dm["Action"].startswith("Attack"):
+            if "player a" in reply_dm["Target"].lower():
+                self.player_a_hp = self.player_a_hp + a_armor - reply_dm["Roll"]
+            if "player b" in reply_dm["Target"].lower():
+                self.player_b_hp = self.player_b_hp + b_armor - reply_dm["Roll"]
+
+        # if anyone's action belongs to the type: healing ex. healing spells or potions on a target.
+        # no over-heal, that is, if someone roll heal 10 on a target, and the target health is 43/46, then the target's hp is back to 46/46
+        # does player A uses healing action:
+        if "healing" in reply_a["Action"].lower():
+            healing_done = reply_a["Roll"]
+            if "player a" in reply_a["Target"].lower():
+                hp_diff = self.player_a_dict["Hit Points"] - self.player_a_hp
+                if hp_diff >= healing_done:
+                    self.player_a_hp = self.player_a_hp + healing_done
+                if hp_diff < healing_done:
+                    # recover to original health
+                    self.player_a_hp = self.player_a_dict["Hit Points"]
+
+            if "player b" in reply_a["Target"].lower():
+                hp_diff = self.player_b_dict["Hit Points"] - self.player_b_hp
+                if hp_diff >= healing_done:
+                    self.player_b_hp = self.player_b_hp + healing_done
+                if hp_diff < healing_done:
+                    # recover to original health
+                    self.player_b_hp = self.player_b_dict["Hit Points"]
+        
+        # does player B uses healing action:
+        if "healing" in reply_b["Action"].lower():
+            healing_done = reply_b["Roll"]
+            if "player a" in reply_b["Target"].lower():
+                hp_diff = self.player_a_dict["Hit Points"] - self.player_a_hp
+                if hp_diff >= healing_done:
+                    self.player_a_hp = self.player_a_hp + healing_done
+                if hp_diff < healing_done:
+                    # recover to original health
+                    self.player_a_hp = self.player_a_dict["Hit Points"]
+
+            if "player b" in reply_b["Target"].lower():
+                hp_diff = self.player_b_dict["Hit Points"] - self.player_b_hp
+                if hp_diff >= healing_done:
+                    self.player_b_hp = self.player_b_hp + healing_done
+                if hp_diff < healing_done:
+                    # recover to original health
+                    self.player_b_hp = self.player_b_dict["Hit Points"]
+        
+        
+        # check if the player uses spell, if so, the spell slots minus 1
+        if "Spell" in reply_a["Action"].lower():
+            self.player_a_slots = self.player_a_slots - 1
+        if "Spell" in reply_b["Action"].lower():
+            self.player_b_slots = self.player_b_slots - 1    
+        
+        a_stats_string = f"Hit Points: {self.player_a_hp}\nPosition: {self.player_a_position}\nSpell slots: {self.player_a_slots}"
+        b_stats_string = f"Hit Points: {self.player_b_hp}\nPosition: {self.player_b_position}\nSpell slots: {self.player_b_slots}"
+        boss_stats_string = f"Hit Points: {self.boss_hp}\nPosition: {self.boss_position}"
+
+        # make action list for a into a single string:
+        action_a_string = ""
+        for item in self.player_a_dict['Actions']:
+            for key, value in item.items():
+                action_a_string += f"{key}: {value}\n"
+            action_a_string += ".....\n"
+
+
+        previous_turn_count = self.current_turn - 1
         replacements_a = {
-            "turn_count": self.current_turn,
-            "target_a": self.boss_position, #this will need to be updated after this turn, for now its fixed for test
-            "target_b": self.player_a_position, #this needs to be updated, for now its fixed for test
-            "action_a": self.player_b_position, #this needs to be updated, for now its fixed for test
-            "action_b": self.blocked_cells, 
-            "roll_a": "Boss", #this needs to be updated, for now its fixed for test
-            "roll_b": "Boss", #this needs to be updated, for now its fixed for test
-            "target_boss": "12", #this needs to be updated, for now its fixed for test
-            "action_boss": "12", #this needs to be updated, for now its fixed for test
-            "roll_boss": self.boss_dict["Stamina"],
-            "player_a_stats": action_dm_string,
-            "player_b_stats": action_dm_string,
-            "boss_stats": action_dm_string,
-            "additional_info": action_dm_string,
-            "player": action_dm_string,
-            "action_list": action_dm_string,
+            "turn_count": previous_turn_count,
+            "target_a": reply_a["Target"], 
+            "target_b": reply_b["Target"], 
+            "action_a": reply_a["Action"],
+            "action_b": reply_b["Action"], 
+            "roll_a": reply_a["Roll"], 
+            "roll_b": reply_b["Roll"], 
+            "target_boss": reply_dm["Target"], 
+            "action_boss": reply_dm["Action"], 
+            "roll_boss": reply_dm["Roll"],
+            "player_a_stats": a_stats_string,
+            "player_b_stats": b_stats_string,
+            "boss_stats": boss_stats_string,
+            "additional_info": "",
+            "player": "Player A",
+            "stamina": self.player_a_dict["Stamina"],
+            "action_list": action_a_string,
             
         }
         
-        self.newturn_prompt_a = Template(self.newturn_prompt_a)
-        self.newturn_prompt_a = self.newturn_prompt_a.substitute(**replacements_a)
+        newturn_prompt_a = Template(self.newturn_prompt_a)
+        newturn_prompt_a = newturn_prompt_a.substitute(**replacements_a)
+        self.player_a.history.append({'role': 'user', 'content': newturn_prompt_a})
+
+        # also log the messages as events for the transcriptions
+        action = {'type': 'send message', 'content': newturn_prompt_a}
+        self.log_event(from_='GM', to='Player 1', action=action)
+
+        answer_a = self.get_utterance('a')
+
+        # update reply_a dict, because this info needs to be passed on
+        bol, reply_a_new = self._validate_player_response(self.player_a, answer_a)
+
+        # remember now player A move, so the position is already updated inside _validate_player_response, and this info needs to be passed on:
+        a_stats_string = f"Hit Points: {self.player_a_hp}\nPosition: {self.player_a_position}\nSpell slots: {self.player_a_slots}"
+        
+        # make action list for a into a single string:
+        action_b_string = ""
+        for item in self.player_b_dict['Actions']:
+            for key, value in item.items():
+                action_b_string += f"{key}: {value}\n"
+            action_b_string += ".....\n"
+
+        replacements_b = {
+            "turn_count": previous_turn_count,
+            "target_a": reply_a["Target"], 
+            "target_b": reply_b["Target"], 
+            "action_a": reply_a["Action"],
+            "action_b": reply_b["Action"], 
+            "roll_a": reply_a["Roll"], 
+            "roll_b": reply_b["Roll"], 
+            "target_boss": reply_dm["Target"], 
+            "action_boss": reply_dm["Action"], 
+            "roll_boss": reply_dm["Roll"],
+            "player_a_stats": a_stats_string,
+            "player_b_stats": b_stats_string,
+            "boss_stats": boss_stats_string,
+            "additional_info": "",
+            "player": "Player B",
+            "stamina": self.player_b_dict["Stamina"],
+            "action_list": action_b_string,
+            
+        }
+
+        newturn_prompt_b = Template(self.newturn_prompt_b)
+        newturn_prompt_b = newturn_prompt_b.substitute(**replacements_b)
+        self.player_b.history.append({'role': 'user', 'content': newturn_prompt_b})
+
+        # also log the messages as events for the transcriptions
+        action = {'type': 'send message', 'content': newturn_prompt_b}
+        self.log_event(from_='GM', to='Player 2', action=action)
+
+        answer_b = self.get_utterance('b')
+
+        # remember now player A move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
+        bol, reply_b_new = self._validate_player_response(self.player_b, answer_b)
+        b_stats_string = f"Hit Points: {self.player_b_hp}\nPosition: {self.player_b_position}\nSpell slots: {self.player_b_slots}"
+
+        action_dm_string = ""
+        for item in self.boss_dict['Actions']:
+            for key, value in item.items():
+                action_dm_string += f"{key}: {value}\n"
+            action_dm_string += ".....\n"
+
+
+        replacements_dm = {
+            "turn_count": previous_turn_count,
+            "target_a": reply_a["Target"], 
+            "target_b": reply_b["Target"], 
+            "action_a": reply_a["Action"],
+            "action_b": reply_b["Action"], 
+            "roll_a": reply_a["Roll"], 
+            "roll_b": reply_b["Roll"], 
+            "name_boss": self.boss_dict["Class Name"],
+            "target_boss": reply_dm["Target"], 
+            "action_boss": reply_dm["Action"], 
+            "roll_boss": reply_dm["Roll"],
+            "player_a_stats": a_stats_string,
+            "player_b_stats": b_stats_string,
+            "boss_stats": boss_stats_string,
+            "additional_info": "",
+            "stamina": self.boss_dict["Stamina"],
+            "action_list": action_dm_string,
+            
+        }
+
+
+        newturn_prompt_dm = Template(self.newturn_prompt_dm)
+        newturn_prompt_dm = newturn_prompt_dm.substitute(**replacements_dm)
+        self.player_dm.history.append({'role': 'user', 'content': newturn_prompt_dm})
+        
+        # also log the messages as events for the transcriptions
+        action = {'type': 'send message', 'content': newturn_prompt_dm}
+        self.log_event(from_='GM', to='Dungeon Master', action=action)
+
+        answer_dm = self.get_utterance('dm')
 
 
 
