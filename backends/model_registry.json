@@ -1,6 +1,6 @@
 [
   {
-    "model_name": "openchat",
+    "model_name": "fsc-openchat-3.5-0106",
     "model_id": "openchat-3.5-0106",
     "backend": "openai_compatible"
   },

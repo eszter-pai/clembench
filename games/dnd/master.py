@@ -94,6 +94,11 @@ class DnD(GameMaster):
         self.boss_position = "A3"
         self.blocked_cells = "C2, B3, E4"
 
+        # initialise common metrics
+        self.request_counts = [0] * (self.max_turns + 1)
+        self.parsed_request_counts = [0] * (self.max_turns + 1)
+        self.violated_request_counts = [0] * (self.max_turns + 1)
+
         # save players' response
         self.player_a_response = []
         self.player_b_response = []
@@ -108,8 +113,7 @@ class DnD(GameMaster):
             })
 
         self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
-        #perhpas for evaluation
-        # self.log_key('n_turns', n_turns)
+    
 
     def initiate(self, prompt_player_a, prompt_player_b, prompt_player_dm):
 
@@ -188,10 +192,24 @@ class DnD(GameMaster):
     #    if self.invalid_response:               # if invalid response - reprompt??
     #        self.log_to_self("invalid response", "abort game")
     #        return False
-        if self.current_turn <= self.max_turns:
-            return True
-        if self.boss_hp <= 0:
-            return False
+
+        if not self.aborted:
+            # game ends if max turns reached
+            if self.current_turn > self.max_turns:
+                self.lose = True
+                return False
+            # game ends if boss is dead
+            elif self.boss_hp <= 0:
+                return False
+            # game ends if all adventurers are dead
+            elif self.player_a_hp <= 0 and self.player_b_hp <= 0:
+                self.lose = True
+                return False
+            # if none of the above is true and max turns not reached, continue
+            elif self.current_turn <= self.max_turns:
+                return True
+            else:
+                return False
         else:
             return False
         
@@ -534,13 +552,15 @@ class DnD(GameMaster):
         if reply_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
             total_damage_done = total_damage_done + reply_b["Roll"]
 
-        self.boss_hp = self.boss_hp + dm_armor - total_damage_done
+        # the target only takes damage if the damage roll is equal or greater to AC
+        if total_damage_done >= dm_armor:
+            self.boss_hp = self.boss_hp - total_damage_done
 
         #player hp left:
         if reply_dm["Action"].startswith("Attack"):
-            if "player a" in reply_dm["Target"].lower():
+            if "player a" in reply_dm["Target"].lower() and reply_dm["Roll"] >= a_armor:
                 self.player_a_hp = self.player_a_hp + a_armor - reply_dm["Roll"]
-            if "player b" in reply_dm["Target"].lower():
+            if "player b" in reply_dm["Target"].lower() and reply_dm["Roll"] >= b_armor:
                 self.player_b_hp = self.player_b_hp + b_armor - reply_dm["Roll"]
 
         # if anyone's action belongs to the type: healing ex. healing spells or potions on a target.
@@ -585,9 +605,9 @@ class DnD(GameMaster):
         
         
         # check if the player uses spell, if so, the spell slots minus 1
-        if "Spell" in reply_a["Action"].lower():
+        if "spell" in reply_a["Action"].lower():
             self.player_a_slots = self.player_a_slots - 1
-        if "Spell" in reply_b["Action"].lower():
+        if "spell" in reply_b["Action"].lower():
             self.player_b_slots = self.player_b_slots - 1    
         
         a_stats_string = f"Hit Points: {self.player_a_hp}\nPosition: {self.player_a_position}\nSpell slots: {self.player_a_slots}"
