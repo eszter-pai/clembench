@@ -109,7 +109,7 @@ class DnD(GameMaster):
             'GM': 'Game master for DnD',
             'Player 1': f'Adventurer A: {self.model_a}',
             'Player 2': f'Adventurer B: {self.model_b}',
-            'Dungeon Master': f'Dungeon Master: {self.model_dm}'
+            'Player Dungeon Master': f'Dungeon Master: {self.model_dm}'
             })
 
         self.initiate(prompt_player_a, prompt_player_b, prompt_dm)
@@ -554,14 +554,26 @@ class DnD(GameMaster):
 
         # the target only takes damage if the damage roll is equal or greater to AC
         if total_damage_done >= dm_armor:
-            self.boss_hp = self.boss_hp - total_damage_done
+            # make sure hp doesn't drop below 0
+            if self.boss_hp - total_damage_done <= 0:
+                self.boss_hp = 0
+            else:
+                self.boss_hp = self.boss_hp - total_damage_done
 
         #player hp left:
         if reply_dm["Action"].startswith("Attack"):
             if "player a" in reply_dm["Target"].lower() and reply_dm["Roll"] >= a_armor:
-                self.player_a_hp = self.player_a_hp + a_armor - reply_dm["Roll"]
+                # make sure hp doesn't drop below 0
+                if self.player_a_hp - reply_dm["Roll"] <= 0:
+                    self.player_a_hp = 0
+                else:
+                    self.player_a_hp = self.player_a_hp - reply_dm["Roll"]
             if "player b" in reply_dm["Target"].lower() and reply_dm["Roll"] >= b_armor:
-                self.player_b_hp = self.player_b_hp + b_armor - reply_dm["Roll"]
+                # make sure hp doesn't drop below 0
+                if self.player_b_hp - reply_dm["Roll"] <= 0:
+                    self.player_b_hp = 0
+                else:
+                    self.player_b_hp = self.player_b_hp - reply_dm["Roll"]
 
         # if anyone's action belongs to the type: healing ex. healing spells or potions on a target.
         # no over-heal, that is, if someone roll heal 10 on a target, and the target health is 43/46, then the target's hp is back to 46/46
