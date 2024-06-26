@@ -411,6 +411,7 @@ class DnD(GameMaster):
                     return False, None, error_message
         
         if action=="Potion: Use healing potion":    # cannot use potions on someone else
+            self.potions = self.potions - 1
             if not target.lower()=='self':
                 if player==self.player_a and not target.lower()=='player a':
                     self.invalid_response = True
