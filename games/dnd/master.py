@@ -313,8 +313,75 @@ class DnD(GameMaster):
         """
         lines = utterance.split('\n')
         response_tags = list(self.response_dict)
-        raw_response = []
+    
 
+        # the num of lines of a player's response should be equal to 4 (num of response tags)
+        if len(lines) != len(response_tags):
+            self.invalid_response = True
+            error_message = "Incorrect Response Format. Your response should only have 4 lines:\n MOVE:\n ACTION:\n TARGET:\n ROLL:\nPlease follow the format."
+            return False, None, error_message
+        
+        # each line should also start with response tags.
+        for i in range(len(lines)):
+            tag = response_tags[i]
+            # check if tagged correctly
+            if not lines[i].startswith(tag):
+                self.invalid_response = True
+                error_message = "Incorrect Response Format. Your response should start with:\n MOVE:\n ACTION:\n TARGET:\n ROLL:\nPlease follow the format."
+                return False, None, error_message
+        
+        # Eszter's NOTE: this is basically equal to reply_dict, but the content is yet parsed. so it is your raw_response but in dictionary 
+        # response into dictionary: ex: {'MOVE': 'A1', 'ACTION': 'Attack: Quarterstaff attack', 'TARGET': 'Boss in A3', 'ROLL': '7'}
+        response_dic = {}
+        for line in lines:
+            # split each string at the first occurrence of the colon
+            key, value = line.split(': ', 1)
+            response_dic[key] = value
+
+        
+        # dice roll part:
+        # get the dice roll formula from action dictionary          
+        if player == self.player_a:
+            player_actions = self.player_a_dict["Actions"]
+        elif player == self.player_b:
+            player_actions = self.player_b_dict["Actions"]
+        else:
+            player_actions = self.boss_dict["Actions"]
+        
+
+        act_dice_roll = ""
+        for act_dic in player_actions:
+            if act_dic["Name"] == response_dic["ACTION"]:
+                act_dice_roll = act_dice_roll + act_dic["Dice"]
+        
+        if act_dice_roll == "":
+            self.invalid_response = True
+            error_message = "The ACTION you picked is not one of the action options, please select the action from the options we give you."
+            return False, None, error_message            
+
+        dice_min = int(act_dice_roll[0])
+        dice_num = int(act_dice_roll[-1])
+        dice_max = dice_min * dice_num
+
+        # is the response a number?:
+        if response_dic["ROLL"].isdigit():
+            response_roll = int(response_dic["ROLL"])
+        else:
+            self.invalid_response = True
+            error_message = "Incorrect Dice Roll. Please respond with only the sum of your dice roll result.\n For example, if your chosen action has “Dice: 3d4”, and you roll 3, 4, and 4, then your dice roll result is 11. So your response is ROLL: 11\n"
+            return False, None, error_message
+
+        #is the sum of the dice roll is possible?
+        if response_roll not in range(dice_min, dice_max + 1):
+            self.invalid_response = True
+            error_message = f"Your Dice Roll result is not between {dice_min} and {dice_max}"
+            return False, None, error_message
+
+
+        #Eszter's NOTE: since the following code (use regex block all incorrect format) cannot specify "this is an dice roll error/the dice roll number is not possible", 
+        # so i put dice roll validation on top (only reply with number?, the roll is within possilbe range?). But that also means that you don't have to use Dice roll regex to check format anymore.
+        # but if you have new regex for dice roll, we can try it. But i think we need to separate every pattern and give different error messages for each incorrect format (ex. "MOVE" is incorrect? "ACTION" is incorrect?...)
+        raw_response = []
         for i in range(len(lines)):
             tag = response_tags[i]
             pattern = self.response_dict[tag]
@@ -324,14 +391,12 @@ class DnD(GameMaster):
             # check if tagged correctly
             if not lines[i].startswith(tag):
                 self.invalid_response = True
-                error_message = """Incorrect Response Format. Please stick to the given format when 
-                entering your reply."""
+                error_message = "Incorrect Response Format. Please stick to the given format when entering your reply."
                 return False, None, error_message
             # check if content matches regex
             if not re.match(pattern, line_content, re.IGNORECASE):
                 self.invalid_response = True
-                error_message = """Incorrect Response Format. Please stick to the given format when 
-                entering your reply."""
+                error_message = "Incorrect Response Format. Please stick to the given format when entering your reply."
                 return False, None, error_message
             
         # log if format was valid 
@@ -365,8 +430,7 @@ class DnD(GameMaster):
         if player == self.player_dm:
             if target.lower()=='boss':
                 self.invalid_response
-                error_message = """the Dungeon Master cannot target the Boss. Remember you are 
-                acting in the boss' place."""
+                error_message = "The Dungeon Master cannot target the Boss. Remember you are acting in the boss' place."
                 action = {'type': 'error', 'content': error_message}
                 self.log_event(from_='GM', to='GM', action=action)
                 return False, None, error_message
@@ -388,8 +452,7 @@ class DnD(GameMaster):
                 self.log_event(from_='GM', to='GM', action=action)
             #    self.log_to_self("invalid move")
                 self.invalid_response = True
-                error_message = """Invalid Move. You can only move as many steps as you have stamina 
-                    and cannot move diagonally. You cannot move into another player's place."""
+                error_message = "Invalid Move. You can only move as many steps as you have stamina and cannot move diagonally. You cannot move into another player's place."
                 return False, None, error_message
 
         # check if input is contained in player's list of possible actions

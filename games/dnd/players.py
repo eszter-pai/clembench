@@ -17,7 +17,8 @@ class Adventurer(Player):
         if turn_idx == 1:
             return "Wizard"
         else:
-            return "MOVE: A1\nACTION: Cantrip: Fire Bolt\nTARGET: boss in D3\nROLL: 12"
+            return "MOVE: A1\nACTION: Attack: Quarterstaff attack\nTARGET: Boss in A3\nROLL: 7"
+          #  return "MOVE: A1\nACTION: Cantrip: Fire Bolt\nTARGET: boss in D3\nROLL: 12"
 
 class DungeonMaster(Player):
     def __init__(self, model_name: str, player: str, clss: str):
