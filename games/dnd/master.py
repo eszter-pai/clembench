@@ -313,7 +313,22 @@ class DnD(GameMaster):
         """
         lines = utterance.split('\n')
         response_tags = list(self.response_dict)
+
+        # first retrieve player-specific info
+        if player == self.player_a:
+            player_dict = self.player_a_dict
+            player_slots = self.player_a_slots
+            player_pos = self.player_a_position
+        elif player == self.player_b:
+            player_dict = self.player_b_dict
+            player_slots = self.player_b_slots
+            player_pos = self.player_b_position
+        elif player == self.player_dm:
+            player_dict = self.boss_dict
+            player_slots = 0
+            player_pos = self.boss_position
     
+        action_lst = player_dict['Actions']
 
         # the num of lines of a player's response should be equal to 4 (num of response tags)
         if len(lines) != len(response_tags):
@@ -336,22 +351,22 @@ class DnD(GameMaster):
         for line in lines:
             # split each string at the first occurrence of the colon
             key, value = line.split(': ', 1)
-            response_dic[key] = value
+            response_dic[key] = value.rstrip()      # RONJA'S NOTE: maybe this will help current parsing issues
 
         
         # dice roll part:
         # get the dice roll formula from action dictionary          
-        if player == self.player_a:
-            player_actions = self.player_a_dict["Actions"]
-        elif player == self.player_b:
-            player_actions = self.player_b_dict["Actions"]
-        else:
-            player_actions = self.boss_dict["Actions"]
+        # if player == self.player_a:
+        #     player_actions = self.player_dict["Actions"]
+        # elif player == self.player_b:
+        #     player_actions = self.player_b_dict["Actions"]
+        # else:
+        #     player_actions = self.boss_dict["Actions"]
         
 
         act_dice_roll = ""
-        for act_dic in player_actions:
-            if act_dic["Name"] == response_dic["ACTION"]:
+        for act_dic in player_dict["Actions"]:
+            if act_dic["Name"] == response_dic["ACTION"].rstrip():
                 act_dice_roll = act_dice_roll + act_dic["Dice"]
         
         if act_dice_roll == "":
@@ -374,59 +389,29 @@ class DnD(GameMaster):
         #is the sum of the dice roll is possible?
         if response_roll not in range(dice_min, dice_max + 1):
             self.invalid_response = True
-            error_message = f"Your Dice Roll result is not between {dice_min} and {dice_max}"
+            error_message = f"Your Dice Roll result is not between {dice_min} and {dice_max} and therefore not a result of the given dice."
             return False, None, error_message
 
 
         #Eszter's NOTE: since the following code (use regex block all incorrect format) cannot specify "this is an dice roll error/the dice roll number is not possible", 
         # so i put dice roll validation on top (only reply with number?, the roll is within possilbe range?). But that also means that you don't have to use Dice roll regex to check format anymore.
         # but if you have new regex for dice roll, we can try it. But i think we need to separate every pattern and give different error messages for each incorrect format (ex. "MOVE" is incorrect? "ACTION" is incorrect?...)
-        raw_response = []
-        for i in range(len(lines)):
-            tag = response_tags[i]
-            pattern = self.response_dict[tag]
-            line_content = lines[i].replace(tag, '')
-            raw_response.append(line_content)
-
-            # check if tagged correctly
-            if not lines[i].startswith(tag):
-                self.invalid_response = True
-                error_message = "Incorrect Response Format. Please stick to the given format when entering your reply."
-                return False, None, error_message
-            # check if content matches regex
-            if not re.match(pattern, line_content, re.IGNORECASE):
-                self.invalid_response = True
-                error_message = "Incorrect Response Format. Please stick to the given format when entering your reply."
-                return False, None, error_message
-            
+ 
         # log if format was valid 
         #self.log_to_self("valid format", "continue")
 
         # now check if response follows game rules
 
-        # first retrieve player-specific info
-        if player == self.player_a:
-            player_dict = self.player_a_dict
-            player_slots = self.player_a_slots
-            player_pos = self.player_a_position
-        elif player == self.player_b:
-            player_dict = self.player_b_dict
-            player_slots = self.player_b_slots
-            player_pos = self.player_b_position
-        elif player == self.player_dm:
-            player_dict = self.boss_dict
-            player_slots = 0
-            player_pos = self.boss_position
-        
-        action_lst = player_dict['Actions']
-
         # fetch contents of response to compare
-        player_move = raw_response[0]
-        action = raw_response[1]
-        target = ' '.join(raw_response[2].split(sep=' ')[:-2])
-        target_pos = raw_response[2].split(sep=' ')[-1]
-        roll = int(raw_response[3])
+        player_move = response_dic['MOVE']
+        action = response_dic['ACTION']
+        target = ' '.join(response_dic['TARGET'].split(' ')[:-2])
+        target_pos = response_dic['TARGET'].split(' ')[-1]
+        roll = int(response_dic['ROLL'])
 
+        ####### CHECK TARGETING VALIDITY
+
+        # special case for DM
         if player == self.player_dm:
             if target.lower()=='boss':
                 self.invalid_response
@@ -434,12 +419,28 @@ class DnD(GameMaster):
                 action = {'type': 'error', 'content': error_message}
                 self.log_event(from_='GM', to='GM', action=action)
                 return False, None, error_message
+            
+        # otherwise: check if target is actually in the position
+        position_check = [('player a', self.player_a_position), 
+                          ('player b', self.player_b_position), 
+                          ('boss', self.boss_position)]
+
+        for check in position_check:
+            name, position = check
+            if target.lower() == name and not position == target_pos:
+                self.invalid_response = True
+                error_message = "The specified target is not in the position you gave."
+                action = {'type': 'error', 'content': error_message}
+                self.log_event(from_='GM', to='GM', action=action)
+                return False, None, error_message
+
 
         # if player stayed in same position, no need to check
         if not player_move == player_pos:
             # check if the move is allowed based on the player's stamina
             n = player_dict['Stamina']
-            if self._check_move(n, player_pos, player_move):
+            valid = self._check_move(n, player_pos, player_move)
+            if valid:
                 # update player's position if the move is valid
                 if player == self.player_a:
                     self.player_a_position = player_move
@@ -450,7 +451,6 @@ class DnD(GameMaster):
             else:
                 action = {'type': 'error', 'content': 'invalid move'}
                 self.log_event(from_='GM', to='GM', action=action)
-            #    self.log_to_self("invalid move")
                 self.invalid_response = True
                 error_message = "Invalid Move. You can only move as many steps as you have stamina and cannot move diagonally. You cannot move into another player's place."
                 return False, None, error_message
