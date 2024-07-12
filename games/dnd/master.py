@@ -35,6 +35,8 @@ class DnD(GameMaster):
         self.aborted: bool = False
         self.lose: bool = False
         self.complete_turns: int = 0
+        self.reprompt_count: int = 0
+
 
 
     def setup(self, **game_instance)-> None:
@@ -297,6 +299,8 @@ class DnD(GameMaster):
             
         # NOTE: this does not yet check if a blocked cell is traversed
         # needs to be implemented in the future
+
+        # check if they go to the same cell
             
         return False
 
@@ -531,6 +535,50 @@ class DnD(GameMaster):
         error_message = "No Error"
         return True, reply_dict, error_message
 
+    def reprompt(self, player, initial_answer, prompt):
+        attempts = 2
+        if player == self.player_a:
+            for attempt in range(attempts):
+                bol, reply_dict, error_message = self._validate_player_response(player, initial_answer)
+                if bol:
+                    break
+                error_string = f"Please try again. The problem of your response is: {error_message}\n"
+                new_attempt = error_string + prompt
+                player.history.append({'role': 'user', 'content': new_attempt})
+                action = {'type': 'send message', 'content': new_attempt}
+                self.log_event(from_='GM', to=f'Player 1', action=action)
+                initial_answer = self.get_utterance('a')
+                self.reprompt_count += 1
+
+        if player == self.player_b:
+            for attempt in range(attempts):
+                bol, reply_dict, error_message = self._validate_player_response(player, initial_answer)
+                if bol:
+                    break
+                error_string = f"Please try again. The problem of your response is: {error_message}\n"
+                new_attempt = error_string + prompt
+                player.history.append({'role': 'user', 'content': new_attempt})
+                action = {'type': 'send message', 'content': new_attempt}
+                self.log_event(from_='GM', to=f'Player 2', action=action)
+                initial_answer = self.get_utterance('b')
+                self.reprompt_count += 1
+
+        if player == self.player_dm:
+            for attempt in range(attempts):
+                bol, reply_dict, error_message = self._validate_player_response(player, initial_answer)
+                if bol:
+                    break
+                error_string = f"Please try again. The problem of your response is: {error_message}\n"
+                new_attempt = error_string + prompt
+                player.history.append({'role': 'user', 'content': new_attempt})
+                action = {'type': 'send message', 'content': new_attempt}
+                self.log_event(from_='GM', to=f'Dungeon Master', action=action)
+                initial_answer = self.get_utterance("dm")
+                self.reprompt_count += 1
+
+
+
+        return bol, reply_dict, error_message
 
     def combat_turn(self) -> None:
 
@@ -574,18 +622,8 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 1', action=action)
 
         answer_a = self.get_utterance('a')
-        bol, reply_dict_a, error_message = self._validate_player_response(self.player_a, answer_a)
+        bol, reply_dict_a, error_message = self.reprompt(self.player_a, answer_a, combat_prompt_a)
 
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_combat_a = error_string + combat_prompt_a
-            self.player_a.history.append({'role': 'user', 'content': new_attempt_combat_a})
-            action = {'type': 'send message', 'content': new_attempt_combat_a}
-            self.log_event(from_='GM', to='Player 1', action=action)
-            answer_a = self.get_utterance('a')
-            bol, reply_dict_a, error_message = self._validate_player_response(self.player_a, answer_a)
-        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -626,18 +664,8 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 2', action=action)
 
         answer_b = self.get_utterance('b')
-        bol, reply_dict_b, error_message = self._validate_player_response(self.player_b, answer_b)
+        bol, reply_dict_b, error_message = self.reprompt(self.player_b, answer_b, combat_prompt_b)
 
-
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_combat_b = error_string + combat_prompt_b
-            self.player_b.history.append({'role': 'user', 'content': new_attempt_combat_b})
-            action = {'type': 'send message', 'content': new_attempt_combat_b}
-            self.log_event(from_='GM', to='Player 2', action=action)
-            answer_a = self.get_utterance('b')
-            bol, reply_dict_b, error_message = self._validate_player_response(self.player_b, answer_b)
-        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -679,17 +707,8 @@ class DnD(GameMaster):
         action = {'type': 'send message', 'content': combat_prompt_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
         answer_dm = self.get_utterance('dm')
-        bol, reply_dict_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
+        bol, reply_dict_dm, error_message = self.reprompt(self.player_dm, answer_dm, combat_prompt_dm)
 
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_combat_dm = error_string + combat_prompt_dm
-            self.player_dm.history.append({'role': 'user', 'content': new_attempt_combat_dm})
-            action = {'type': 'send message', 'content': new_attempt_combat_dm}
-            self.log_event(from_='GM', to='Dungeon Master', action=action)
-            answer_dm = self.get_utterance('dm')
-            bol, reply_dict_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
-        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message 
@@ -837,19 +856,8 @@ class DnD(GameMaster):
         answer_a = self.get_utterance('a')
 
         # update reply_a dict, because this info needs to be passed on
-        bol, reply_a, error_message = self._validate_player_response(self.player_a, answer_a)
+        bol, reply_a, error_message = self.reprompt(self.player_a, answer_a, newturn_prompt_a)
 
-
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_newturn_a = error_string + newturn_prompt_a
-            self.player_a.history.append({'role': 'user', 'content': new_attempt_newturn_a})
-            action = {'type': 'send message', 'content': new_attempt_newturn_a}
-            self.log_event(from_='GM', to='Player 1', action=action)
-            answer_a = self.get_utterance('a')
-            bol, reply_a, error_message = self._validate_player_response(self.player_a, answer_a)
-        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -898,20 +906,8 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 2', action=action)
 
         answer_b = self.get_utterance('b')
-
-        # remember now player B move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
-        bol, reply_b, error_message = self._validate_player_response(self.player_b, answer_b)
-
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_newturn_b = error_string + newturn_prompt_a
-            self.player_b.history.append({'role': 'user', 'content': new_attempt_newturn_b})
-            action = {'type': 'send message', 'content': new_attempt_newturn_b}
-            self.log_event(from_='GM', to='Player 2', action=action)
-            answer_b = self.get_utterance('b')
-            bol, reply_b, error_message = self._validate_player_response(self.player_b, answer_b)
-        
+        bol, reply_b, error_message = self.reprompt(self.player_b, answer_b, newturn_prompt_b)
+    
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -960,20 +956,7 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Dungeon Master', action=action)
 
         answer_dm = self.get_utterance('dm')
-
-        # remember now player DM move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
-        bol, reply_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_newturn_dm = error_string + newturn_prompt_dm
-            self.player_dm.history.append({'role': 'user', 'content': new_attempt_newturn_dm})
-            action = {'type': 'send message', 'content': new_attempt_newturn_dm}
-            self.log_event(from_='GM', to='Dungeon Master', action=action)
-            answer_dm = self.get_utterance('dm')
-            bol, reply_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
-        
+        bol, reply_dm, error_message = self.reprompt(self.player_dm, answer_dm, newturn_prompt_dm)          
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
