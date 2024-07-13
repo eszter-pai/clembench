@@ -4,6 +4,7 @@ import string
 from typing import List, Dict, Tuple
 from string import Template
 import numpy as np
+import scipy
 
 import clemgame.metrics as ms
 from clemgame.clemgame import GameMaster, GameBenchmark, DialogueGameMaster, GameScorer
@@ -307,7 +308,68 @@ class DnD(GameMaster):
     def _on_parse_response(self, player, utterance: str):
         """Assess whether the player's response needs to be edited before it is logged."""
     
+        # RONJA'S NOTE: Do we still need this ?
+
         return False, utterance
+    
+    def _score_move(self, player, action: str, target: str):
+        """Assess whether the player's move was a bad choice. Bad choices are:
+        1. Targeting the boss with an attack it is resistant to.
+        2. Choosing not to revive a dead adventurer when able to.
+        3. Choosing to heal when above 70% hit points.
+        
+        This is only done for adventurers and not the DM."""
+
+        if player == self.player_a:
+            player_dict = self.player_a_dict
+            player_cls = self.player_a.clss
+            player_slots = self.player_a_slots
+            player_hp = self.player_a_hp
+            other_adv_hp = self.player_b_hp
+        if player == self.player_b:
+            player_dict = self.player_b_dict
+            player_cls = self.player_b.clss
+            player_slots = self.player_b_slots
+            player_hp = self.player_b_hp
+            other_adv_hp = self.player_a_hp
+        if player == self.player_dm:
+            raise Exception("Invalid player.")
+
+        boss_res = self.boss_dict['Resistance']
+        action_list = player_dict['Actions']
+        action_type = ""
+
+        for i, a in enumerate(action_list):
+            if a["Name"] == action:
+                action_type = action_list[i]["Type"]
+
+        # 1. targeting the boss with an attack it is resistant to
+        if target.lower() == "boss":
+            if action_type == boss_res:
+                    return False
+
+        # 2. Choosing not to revive a player when able to
+        if player_cls == "Cleric":
+            if other_adv_hp == 0 and player_slots != 0:
+                return False
+            
+        # 3. Choosing to heal when above 70% HP
+        healers = ["Cleric", "Sorcerer", "Ranger"]
+        max_hp = player_dict["Hit Points"]
+
+        if (player_hp / max_hp) > 0.7:
+            if "potion" in action.lower():
+                return False
+            if player_cls in healers:
+                if action_type == "Healing":
+                    if target.lower() == "self":
+                        return False
+                    if player == self.player_a and target.lower() == "player a":
+                        return False
+                    elif player == self.player_b and target.lower() == "player b":
+                        return False
+
+        return True
 
     def _validate_player_response(self, player, utterance: str):
         """
@@ -337,6 +399,8 @@ class DnD(GameMaster):
         # the num of lines of a player's response should be equal to 4 (num of response tags)
         if len(lines) != len(response_tags):
             self.invalid_response = True
+            action = {'type': 'error', 'content': 'invalid format'}
+            self.log_event(from_='GM', to='GM', action=action)
             error_message = "Incorrect Response Format. Your response should only have 4 lines:\n MOVE:\n ACTION:\n TARGET:\n ROLL:\nPlease follow the format."
             return False, None, error_message
         
@@ -346,6 +410,8 @@ class DnD(GameMaster):
             # check if tagged correctly
             if not lines[i].startswith(tag):
                 self.invalid_response = True
+                action = {'type': 'error', 'content': 'invalid format'}
+                self.log_event(from_='GM', to='GM', action=action)
                 error_message = "Incorrect Response Format. Your response should start with:\n MOVE:\n ACTION:\n TARGET:\n ROLL:\nPlease follow the format."
                 return False, None, error_message
         
@@ -357,17 +423,6 @@ class DnD(GameMaster):
             key, value = line.split(': ', 1)
             response_dic[key] = value.rstrip()      # RONJA'S NOTE: maybe this will help current parsing issues
 
-        
-        # dice roll part:
-        # get the dice roll formula from action dictionary          
-        # if player == self.player_a:
-        #     player_actions = self.player_dict["Actions"]
-        # elif player == self.player_b:
-        #     player_actions = self.player_b_dict["Actions"]
-        # else:
-        #     player_actions = self.boss_dict["Actions"]
-        
-
         act_dice_roll = ""
         for act_dic in player_dict["Actions"]:
             if act_dic["Name"] == response_dic["ACTION"].rstrip():
@@ -375,6 +430,8 @@ class DnD(GameMaster):
         
         if act_dice_roll == "":
             self.invalid_response = True
+            action = {'type': 'error', 'content': 'invalid action'}
+            self.log_event(from_='GM', to='GM', action=action)
             error_message = "The ACTION you picked is not one of the action options, please select the action from the options we give you."
             return False, None, error_message            
 
@@ -387,12 +444,16 @@ class DnD(GameMaster):
             response_roll = int(response_dic["ROLL"])
         else:
             self.invalid_response = True
+            action = {'type': 'error', 'content': 'invalid format'}
+            self.log_event(from_='GM', to='GM', action=action)
             error_message = "Incorrect Dice Roll. Please respond with only the sum of your dice roll result.\n For example, if your chosen action has “Dice: 3d4”, and you roll 3, 4, and 4, then your dice roll result is 11. So your response is ROLL: 11\n"
             return False, None, error_message
 
         #is the sum of the dice roll is possible?
         if response_roll not in range(dice_min, dice_max + 1):
             self.invalid_response = True
+            action = {'type': 'error', 'content': 'invalid roll'}
+            self.log_event(from_='GM', to='GM', action=action)
             error_message = f"Your Dice Roll result is not between {dice_min} and {dice_max} and therefore not a result of the given dice."
             return False, None, error_message
 
@@ -420,21 +481,19 @@ class DnD(GameMaster):
             if target.lower()=='boss':
                 self.invalid_response
                 error_message = "The Dungeon Master cannot target the Boss. Remember you are acting in the boss' place."
-                action = {'type': 'error', 'content': error_message}
+                action = {'type': 'error', 'content': 'DM targets boss'}
                 self.log_event(from_='GM', to='GM', action=action)
                 return False, None, error_message
             
         # otherwise: check if target is actually in the position
-        position_check = [('player a', self.player_a_position), 
-                          ('player b', self.player_b_position), 
-                          ('boss', self.boss_position)]
+        position_check = [('player a', self.player_a_position), ('player b', self.player_b_position), ('boss', self.boss_position)]
 
         for check in position_check:
             name, position = check
             if target.lower() == name and not position == target_pos:
                 self.invalid_response = True
                 error_message = "The specified target is not in the position you gave."
-                action = {'type': 'error', 'content': error_message}
+                action = {'type': 'error', 'content': 'invalid target position'}
                 self.log_event(from_='GM', to='GM', action=action)
                 return False, None, error_message
 
@@ -444,15 +503,7 @@ class DnD(GameMaster):
             # check if the move is allowed based on the player's stamina
             n = player_dict['Stamina']
             valid = self._check_move(n, player_pos, player_move)
-            if valid:
-                # update player's position if the move is valid
-                if player == self.player_a:
-                    self.player_a_position = player_move
-                elif player == self.player_b:
-                    self.player_b_position = player_move
-                elif player == self.player_dm:
-                    self.boss_position = player_move
-            else:
+            if not valid:
                 action = {'type': 'error', 'content': 'invalid move'}
                 self.log_event(from_='GM', to='GM', action=action)
                 self.invalid_response = True
@@ -497,14 +548,14 @@ class DnD(GameMaster):
                 if not target.lower()=='player b' and not self.player_b_hp==0:
                     self.invalid_response = True
                     error_message = "Invalid target. You cannot revive the boss, yourself, or a player who is alive."
-                    action = {'type': 'error', 'content': error_message}
+                    action = {'type': 'error', 'content': 'invalid target'}
                     self.log_event(from_='GM', to='GM', action=action)
                     return False, None, error_message
             elif player==self.player_b:
                 if not target.lower()=='player a' and not self.player_a_hp==0:
                     self.invalid_response = True
                     error_message = "Invalid target. You cannot revive the boss, yourself, or a player who is alive."
-                    action = {'type': 'error', 'content': error_message}
+                    action = {'type': 'error', 'content': 'invalid target'}
                     self.log_event(from_='GM', to='GM', action=action)
                     return False, None, error_message
         
@@ -514,17 +565,26 @@ class DnD(GameMaster):
                 if player==self.player_a and not target.lower()=='player a':
                     self.invalid_response = True
                     error_message = "Potions cannot be used on someone else"
-                    action = {'type': 'error', 'content': error_message}
+                    action = {'type': 'error', 'content': 'invalid target'}
                     self.log_event(from_='GM', to='GM', action=action)
                     return False, None, error_message
                 elif player==self.player_b and not target.lower()=='player b':
                     self.invalid_response = True
                     error_message = "Potions cannot be used on someone else"
-                    action = {'type': 'error', 'content': error_message}
+                    action = {'type': 'error', 'content': 'invalid target'}
                     self.log_event(from_='GM', to='GM', action=action)
                     return False, None, error_message
                 
         # if nothing was False until now, return LLM's reply to feed into next prompt
+        # and update player position in the dungeon 
+
+        if player == self.player_a:
+            self.player_a_position = player_move
+        elif player == self.player_b:
+            self.player_b_position = player_move
+        elif player == self.player_dm:
+            self.boss_position = player_move
+
         reply_dict = {
             "Position" : player_move,
             "Action" : action,
@@ -532,7 +592,18 @@ class DnD(GameMaster):
             "Roll" : roll
         }
 
+        # check if the move was bad if it was an adventurer
+        if not player == self.player_dm:
+            if self._score_move(player=player, action=action, target=target):
+                None
+            else:
+                action = {'type': 'info', 'content': 'bad move'}
+                self.log_event(from_='GM', to='GM', action=action)
+
         error_message = "No Error"
+        # log a valid move
+        action = {'type': 'info', 'content': 'valid move'}
+        self.log_event(from_='GM', to='GM', action=action)
         return True, reply_dict, error_message
 
     def reprompt(self, player, initial_answer, prompt):
@@ -622,8 +693,18 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 1', action=action)
 
         answer_a = self.get_utterance('a')
-        bol, reply_dict_a, error_message = self.reprompt(self.player_a, answer_a, combat_prompt_a)
+        bol, reply_dict_a, error_message = self._validate_player_response(self.player_a, answer_a)
 
+        # if the bol is Flase (the response is invalid due to the reason described in error message)
+        if bol == False:
+            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
+            new_attempt_combat_a = error_string + combat_prompt_a
+            self.player_a.history.append({'role': 'user', 'content': new_attempt_combat_a})
+            action = {'type': 'send message', 'content': new_attempt_combat_a}
+            self.log_event(from_='GM', to='Player 1', action=action)
+            answer_a = self.get_utterance('a')
+            bol, reply_dict_a, error_message = self._validate_player_response(self.player_a, answer_a)
+        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -664,8 +745,18 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 2', action=action)
 
         answer_b = self.get_utterance('b')
-        bol, reply_dict_b, error_message = self.reprompt(self.player_b, answer_b, combat_prompt_b)
+        bol, reply_dict_b, error_message = self._validate_player_response(self.player_b, answer_b)
 
+
+        if bol == False:
+            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
+            new_attempt_combat_b = error_string + combat_prompt_b
+            self.player_b.history.append({'role': 'user', 'content': new_attempt_combat_b})
+            action = {'type': 'send message', 'content': new_attempt_combat_b}
+            self.log_event(from_='GM', to='Player 2', action=action)
+            answer_a = self.get_utterance('b')
+            bol, reply_dict_b, error_message = self._validate_player_response(self.player_b, answer_b)
+        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -707,8 +798,17 @@ class DnD(GameMaster):
         action = {'type': 'send message', 'content': combat_prompt_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
         answer_dm = self.get_utterance('dm')
-        bol, reply_dict_dm, error_message = self.reprompt(self.player_dm, answer_dm, combat_prompt_dm)
+        bol, reply_dict_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
 
+        if bol == False:
+            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
+            new_attempt_combat_dm = error_string + combat_prompt_dm
+            self.player_dm.history.append({'role': 'user', 'content': new_attempt_combat_dm})
+            action = {'type': 'send message', 'content': new_attempt_combat_dm}
+            self.log_event(from_='GM', to='Dungeon Master', action=action)
+            answer_dm = self.get_utterance('dm')
+            bol, reply_dict_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
+        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message 
@@ -856,8 +956,19 @@ class DnD(GameMaster):
         answer_a = self.get_utterance('a')
 
         # update reply_a dict, because this info needs to be passed on
-        bol, reply_a, error_message = self.reprompt(self.player_a, answer_a, newturn_prompt_a)
+        bol, reply_a, error_message = self._validate_player_response(self.player_a, answer_a)
 
+
+        # if the bol is Flase (the response is invalid due to the reason described in error message)
+        if bol == False:
+            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
+            new_attempt_newturn_a = error_string + newturn_prompt_a
+            self.player_a.history.append({'role': 'user', 'content': new_attempt_newturn_a})
+            action = {'type': 'send message', 'content': new_attempt_newturn_a}
+            self.log_event(from_='GM', to='Player 1', action=action)
+            answer_a = self.get_utterance('a')
+            bol, reply_a, error_message = self._validate_player_response(self.player_a, answer_a)
+        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -906,8 +1017,20 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 2', action=action)
 
         answer_b = self.get_utterance('b')
-        bol, reply_b, error_message = self.reprompt(self.player_b, answer_b, newturn_prompt_b)
-    
+
+        # remember now player B move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
+        bol, reply_b, error_message = self._validate_player_response(self.player_b, answer_b)
+
+        # if the bol is Flase (the response is invalid due to the reason described in error message)
+        if bol == False:
+            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
+            new_attempt_newturn_b = error_string + newturn_prompt_a
+            self.player_b.history.append({'role': 'user', 'content': new_attempt_newturn_b})
+            action = {'type': 'send message', 'content': new_attempt_newturn_b}
+            self.log_event(from_='GM', to='Player 2', action=action)
+            answer_b = self.get_utterance('b')
+            bol, reply_b, error_message = self._validate_player_response(self.player_b, answer_b)
+        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -956,7 +1079,20 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Dungeon Master', action=action)
 
         answer_dm = self.get_utterance('dm')
-        bol, reply_dm, error_message = self.reprompt(self.player_dm, answer_dm, newturn_prompt_dm)          
+
+        # remember now player DM move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
+        bol, reply_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
+        # if the bol is Flase (the response is invalid due to the reason described in error message)
+
+        if bol == False:
+            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
+            new_attempt_newturn_dm = error_string + newturn_prompt_dm
+            self.player_dm.history.append({'role': 'user', 'content': new_attempt_newturn_dm})
+            action = {'type': 'send message', 'content': new_attempt_newturn_dm}
+            self.log_event(from_='GM', to='Dungeon Master', action=action)
+            answer_dm = self.get_utterance('dm')
+            bol, reply_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
+        
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -987,25 +1123,41 @@ class DnDScorer(GameScorer):
 
         """Compute episode-level and turn-level scores (mandatory)."""
 
+        max_turns = 15
         invalid_response = False
         adventurers_won = False
+        game_aborted = False
+        format_violations = 0
+        rule_violations = 0
+        valid_moves = 0
+        bad_moves = 0
         turn_scores = []
 
         for turn_idx, turn in enumerate(episode_interactions["turns"]):
-            if not turn_idx == 0:
-                turn_score = {"victory" : None, "request_count": 1}
+            if not turn_idx == 0:   # skip first turn 
+                turn_score = {"request_count": 1}
 
                 for event in turn:
                     action = event["action"]
                     if action["type"] == "error":
-                        invalid_response = True
+                        invalid_response = True     # any error leads to an invalid response
+
+                        # differentiate format vs rule violations and log separately:
+                        if action["content"] == "invalid format":
+                            format_violations += 1
+                        else:
+                            rule_violations += 1
                         
-                    if action["type"] == "info" and "game failed due to" in action["content"]:
-                            invalid_response = True
+                    if action["type"] == "info":
+                        if action["content"] == "valid move":
+                            valid_moves += 1
+                        if "game failed due to" in action["content"]:
+                            game_aborted = True
+                        if action["content"] == "bad move":
+                            bad_moves += 1
 
                     if action["content"] == "boss defeated":
                         adventurers_won = True
-                        turn_score["victory"] = 1
 
                 if invalid_response:
                     turn_score["violated_request_count"] = 1
@@ -1014,12 +1166,18 @@ class DnDScorer(GameScorer):
                     turn_score["violated_request_count"] = 0
                     turn_score["parsed_request_count"] = 1
 
-                self.log_turn_score(turn_idx, "Victory", turn_score["victory"])
+                turn_score["format_violation_count"] = format_violations
+                turn_score["rule_violation_count"] = rule_violations
+
+                # log turn scores
                 self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_VIOLATED, turn_score["violated_request_count"])
                 self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_PARSED, turn_score["parsed_request_count"])
                 self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT, turn_score["request_count"])
+                self.log_turn_score(turn_idx, "Format Violations", turn_score["format_violation_count"])
+                self.log_turn_score(turn_idx, "Rule Violations", turn_score["rule_violation_count"])
                 turn_scores.append(turn_score)
         
+        # log episode scores
         played_turns = episode_interactions['Played turns']
         self.log_episode_score("Played turns", played_turns)
         complete_turns = episode_interactions['Complete turns']
@@ -1036,23 +1194,32 @@ class DnDScorer(GameScorer):
 
         self.log_episode_score(ms.METRIC_REQUEST_SUCCESS, parsed_request_count / request_count)
 
+        format_violation_count = sum([turn["format_violation_count"] for turn in turn_scores])
+        self.log_episode_score("Format Violations", format_violation_count)
+
+        rule_violation_count = sum([turn["rule_violation_count"] for turn in turn_scores])
+        self.log_episode_score("Rule Violations", rule_violation_count)
+
         # Common metrics
-        if invalid_response:  # whether a violation of the game rules happened (response not parsable)
+        if game_aborted:  # if the game had to be aborted
             self.log_episode_score(ms.METRIC_ABORTED, 1)
             self.log_episode_score(ms.METRIC_SUCCESS, 0)
             self.log_episode_score(ms.METRIC_LOSE, 0)
-            # Game-specific metrics
             self.log_episode_score(ms.BENCH_SCORE, np.nan)  # metric not applicable
         else:
             self.log_episode_score(ms.METRIC_ABORTED, 0)
+
+            # if the adventurers won: compute bench score
             if adventurers_won:
                 self.log_episode_score(ms.METRIC_SUCCESS, 1)
                 self.log_episode_score(ms.METRIC_LOSE, 0)
-                self.log_episode_score(ms.BENCH_SCORE, 100 / len(turn_scores))  # how fast did they beat the boss
+                speed = 1 - (played_turns / max_turns)  # how fast did they beat the boss?
+                intel = 1 - (bad_moves / valid_moves)   # how many valid but bad moves did they make?
+                self.log_episode_score(ms.BENCH_SCORE, scipy.stats.hmean([speed, intel]))  # harmonic mean btw speed & 'intelligence'
             else:
                 self.log_episode_score(ms.METRIC_SUCCESS, 0)
                 self.log_episode_score(ms.METRIC_LOSE, 1)
-                self.log_episode_score(ms.BENCH_SCORE, 0)  # word not found   
+                self.log_episode_score(ms.BENCH_SCORE, 0)  # failure
                  
 
 # always add the GameBenchmark child with this structure

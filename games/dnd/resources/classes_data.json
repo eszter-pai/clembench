@@ -35,7 +35,6 @@
             {"Name": "Attack: Flail attack", "Dice": "3d6", "Type": "Piercing", "Condition": "adjacency"},
             {"Name": "Spell: Revivify", "Description": "Revive another player", "Type": "Healing", "Condition": "spell slot"},
             {"Name": "Spell: Healing Word", "Dice": "2d8", "Type": "Healing", "Condition": "spell slot"},
-            {"Name": "Block", "Description": "Block Incoming Damage on self or other player", "Condition": "adjacency"},
             {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing","Condition": "potions"}
         ]
     },
@@ -48,7 +47,7 @@
         "Actions": [
             {"Name": "Attack: Sword attack", "Dice": "4d6", "Type": "Slashing", "Condition": "adjacency"},
             {"Name": "Attack: Pommel strike", "Dice": "2d4", "Type": "Blunt", "Condition": "adjacency"},
-            {"Name": "Block", "Description": "Block Incoming Damage on self or other player", "Condition": "adjacency"},
+            {"Name": "Attack: Forward strike", "Dice": "3d4", "Type": "Piercing", "Condition": "adjacency"},
             {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"}
         ]
     },
