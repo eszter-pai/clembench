@@ -50,6 +50,9 @@ class DnD(GameMaster):
         player_B_class = game_instance['player_b_class']
         player_dm_monster = game_instance['boss_dict']['Class Name']
 
+        # game mode
+        self.game_mode = game_instance['mode']
+
         # instantiate players
         self.player_a = Adventurer(self.model_a, "A", player_a_class)
         self.player_b = Adventurer(self.model_b, "B", player_B_class)
@@ -794,7 +797,11 @@ class DnD(GameMaster):
             if not key == "Actions" and not key == "Difficulty":
                 boss_info += f"{key}: {value}\n"
 
-
+        if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
+            add_info_a = f"You and Player B have {self.potions} Potions in total, and you can use your 'Spell' for {self.player_a_slots} times.\n"
+        else:
+            add_info_a = f"You and Player B have {self.potions} Potions in total.\n"
+      
         replacements_a = {
             "num_turn": self.current_turn,
             "position": self.player_a_position,
@@ -805,7 +812,7 @@ class DnD(GameMaster):
             "hp": self.player_a_hp,
             "armor": self.player_a_dict["Armor Class"],
             "stamina": self.player_a_dict["Stamina"],
-            "additional_info": "",
+            "additional_info": add_info_a,
             "player": "Player A",
             "action_list": action_a_string
         }
@@ -851,7 +858,13 @@ class DnD(GameMaster):
             for key, value in item.items():
                 action_b_string += f"{key}: {value}\n"
             action_b_string += ".....\n"        
-                        
+
+
+        if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
+            add_info_b = f"You and Player A have {self.potions} Potions in total, and you can use your 'Spell' for {self.player_b_slots} times.\n"
+        else:
+            add_info_b = f"You and Player A have {self.potions} Potions in total.\n"        
+            
         replacements_b = {
             "num_turn": self.current_turn,
             "position": self.player_b_position,
@@ -862,7 +875,7 @@ class DnD(GameMaster):
             "hp": self.player_b_hp,
             "armor": self.player_b_dict["Armor Class"],
             "stamina": self.player_b_dict["Stamina"],
-            "additional_info": "",
+            "additional_info": add_info_b,
             "player": "Player B",
             "action_list": action_b_string
         }
@@ -1058,6 +1071,12 @@ class DnD(GameMaster):
                 action_a_string += f"{key}: {value}\n"
             action_a_string += ".....\n"
 
+        add_info_a = ""
+        if self.game_mode == "guided":
+            if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
+                add_info_a = f"You and Player B have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_a_slots} times.\n"
+            else:
+                add_info_a = f"You and Player B have {self.potions} Potions in left.\n"  
 
         previous_turn_count = self.current_turn - 1
         replacements_a = {
@@ -1074,7 +1093,7 @@ class DnD(GameMaster):
             "player_a_stats": a_stats_string,
             "player_b_stats": b_stats_string,
             "boss_stats": boss_stats_string,
-            "additional_info": "",
+            "additional_info": add_info_a,
             "player": "Player A",
             "stamina": self.player_a_dict["Stamina"],
             "action_list": action_a_string,
@@ -1122,6 +1141,13 @@ class DnD(GameMaster):
             for key, value in item.items():
                 action_b_string += f"{key}: {value}\n"
             action_b_string += ".....\n"
+        
+        add_info_b = ""
+        if self.game_mode == "guided":
+            if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
+                add_info_b = f"You and Player A have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_b_slots} times.\n"
+            else:
+                add_info_b = f"You and Player A have {self.potions} Potions in left.\n"  
 
         replacements_b = {
             "turn_count": previous_turn_count,
@@ -1137,7 +1163,7 @@ class DnD(GameMaster):
             "player_a_stats": a_stats_string,
             "player_b_stats": b_stats_string,
             "boss_stats": boss_stats_string,
-            "additional_info": "",
+            "additional_info": add_info_b,
             "player": "Player B",
             "stamina": self.player_b_dict["Stamina"],
             "action_list": action_b_string,
