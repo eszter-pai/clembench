@@ -243,6 +243,7 @@ class DnD(GameMaster):
     def play(self) -> None:
         while self.does_game_proceed():
             self.current_turn += 1
+            self.complete_turns += 1
 
             # always call log_next_turn when a new turn starts
             self.log_next_turn()
@@ -268,6 +269,7 @@ class DnD(GameMaster):
         # log other eval assets
         self.log_key('Played turns', self.current_turn)
         self.log_key('Complete turns', self.complete_turns)
+        self.log_key('Reprompt count', self.reprompt_count)
         self.log_key(ms.METRIC_ABORTED, self.aborted)
         self.log_key(ms.METRIC_LOSE, self.lose)
         self.log_key(ms.METRIC_REQUEST_COUNT, self.request_counts)
@@ -1338,16 +1340,11 @@ class DnDScorer(GameScorer):
                 self.log_episode_score(ms.METRIC_SUCCESS, 1)
                 self.log_episode_score(ms.METRIC_LOSE, 0)
 
-                speed = played_turns / max_turns  # how fast did they beat the boss?
-                intel = bad_moves/valid_moves   # how many valid but bad moves did they make?
+                speed = 1 - (played_turns / max_turns)  # how fast did they beat the boss?
+                intel = 1 - (bad_moves/valid_moves)   # how many valid but bad moves did they make?
 
-                if rule_violation_count == 0:   # for guided mode
-                    obedience = 1
-                else:
-                    obedience = rule_violation_count/parsed_request_count  # how much did they obey the rules
-
-                # bench score as harmonic mean of speed, intelligence, and obedience
-                self.log_episode_score(ms.BENCH_SCORE, 1 - scipy.stats.hmean([speed, intel, obedience]))  
+                # bench score as harmonic mean of speed & intelligence
+                self.log_episode_score(ms.BENCH_SCORE, 1 - scipy.stats.hmean([speed, intel]))  
 
             else:
                 self.log_episode_score(ms.METRIC_SUCCESS, 0)
