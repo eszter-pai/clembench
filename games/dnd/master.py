@@ -1268,48 +1268,40 @@ class DnDScorer(GameScorer):
         turn_scores = []
 
         for turn_idx, turn in enumerate(episode_interactions["turns"]):
-            if not turn_idx == 0:   # skip first turn 
-                turn_score = {"request_count": 1}
+            turn_score = {"request_count": 1,
+                              "violated_request_count": 0,
+                              "parsed_request_count": 0,
+                              "format_violation_count": 0}
 
-                for event in turn:
-                    action = event["action"]
-                    if action["type"] == "error":
-                        invalid_response = True     # any error leads to an invalid response
-
+            for event in turn:
+                action = event["action"]
+                if action["type"] == "error":
                         # differentiate format vs rule violations and log separately:
-                        if action["content"] == "invalid format":
-                            format_violations += 1
-                        else:
-                            rule_violations += 1
+                    if action["content"] == "invalid format":
+                        turn_score["violated_request_count"] = turn_score["violated_request_count"] + 1
+                    else:
+                        rule_violations += 1
+                        turn_score["parsed_request_count"] = turn_score["parsed_request_count"] + 1
                         
-                    if action["type"] == "info":
-                        if action["content"] == "valid move":
-                            valid_moves += 1
-                        if "game failed due to" in action["content"]:
-                            game_aborted = True
-                        if action["content"] == "bad move":
-                            bad_moves += 1
+                if action["type"] == "info":
+                    if action["content"] == "valid move":
+                        valid_moves += 1
+                    if "game failed due to" in action["content"]:
+                        game_aborted = True
+                    if action["content"] == "bad move":
+                        bad_moves += 1
 
-                    if action["content"] == "boss defeated":
-                        adventurers_won = True
+                if action["content"] == "boss defeated":
+                    adventurers_won = True
 
-                if invalid_response:
-                    turn_score["violated_request_count"] = 1
-                    turn_score["parsed_request_count"] = 0
-                else:
-                    turn_score["violated_request_count"] = 0
-                    turn_score["parsed_request_count"] = 1
-
-                turn_score["format_violation_count"] = format_violations
-                turn_score["rule_violation_count"] = rule_violations
+            turn_score["rule_violation_count"] = rule_violations
 
                 # log turn scores
-                self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_VIOLATED, turn_score["violated_request_count"])
-                self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_PARSED, turn_score["parsed_request_count"])
-                self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT, turn_score["request_count"])
-                self.log_turn_score(turn_idx, "Format Violations", turn_score["format_violation_count"])
-                self.log_turn_score(turn_idx, "Rule Violations", turn_score["rule_violation_count"])
-                turn_scores.append(turn_score)
+            self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_VIOLATED, turn_score["violated_request_count"])
+            self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_PARSED, turn_score["parsed_request_count"])
+            self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT, turn_score["request_count"])
+            self.log_turn_score(turn_idx, "Rule Violations", turn_score["rule_violation_count"])
+            turn_scores.append(turn_score)
         
         # log episode scores
         played_turns = episode_interactions['Played turns']
@@ -1328,9 +1320,6 @@ class DnDScorer(GameScorer):
 
         self.log_episode_score(ms.METRIC_REQUEST_SUCCESS, parsed_request_count / request_count)
 
-        format_violation_count = sum([turn["format_violation_count"] for turn in turn_scores])
-        self.log_episode_score("Format Violations", format_violation_count)
-
         rule_violation_count = sum([turn["rule_violation_count"] for turn in turn_scores])
         self.log_episode_score("Rule Violations", rule_violation_count)
 
@@ -1340,16 +1329,26 @@ class DnDScorer(GameScorer):
             self.log_episode_score(ms.METRIC_SUCCESS, 0)
             self.log_episode_score(ms.METRIC_LOSE, 0)
             self.log_episode_score(ms.BENCH_SCORE, np.nan)  # metric not applicable
+
         else:
             self.log_episode_score(ms.METRIC_ABORTED, 0)
 
             # if the adventurers won: compute bench score
-            if adventurers_won:
+            if adventurers_won == True:
                 self.log_episode_score(ms.METRIC_SUCCESS, 1)
                 self.log_episode_score(ms.METRIC_LOSE, 0)
-                speed = 1 - (played_turns / max_turns)  # how fast did they beat the boss?
-                intel = 1 - (bad_moves / valid_moves)   # how many valid but bad moves did they make?
-                self.log_episode_score(ms.BENCH_SCORE, scipy.stats.hmean([speed, intel]))  # harmonic mean btw speed & 'intelligence'
+
+                speed = played_turns / max_turns  # how fast did they beat the boss?
+                intel = bad_moves/valid_moves   # how many valid but bad moves did they make?
+
+                if rule_violation_count == 0:   # for guided mode
+                    obedience = 1
+                else:
+                    obedience = rule_violation_count/parsed_request_count  # how much did they obey the rules
+
+                # bench score as harmonic mean of speed, intelligence, and obedience
+                self.log_episode_score(ms.BENCH_SCORE, 1 - scipy.stats.hmean([speed, intel, obedience]))  
+
             else:
                 self.log_episode_score(ms.METRIC_SUCCESS, 0)
                 self.log_episode_score(ms.METRIC_LOSE, 1)
