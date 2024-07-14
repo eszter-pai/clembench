@@ -9,7 +9,8 @@
             {"Name": "Spell: Ice Knife", "Dice": "3d6", "Type": "Ice", "Condition": "spell slot"},
             {"Name": "Cantrip: Fire Bolt", "Dice": "4d4", "Type": "Fire", "Condition": "None"},
             {"Name": "Attack: Quarterstaff attack", "Dice": "2d4", "Type": "Blunt", "Condition": "adjacency"},
-            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "adjacency"}
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "adjacency"},
+            {"Name": "Do nothing", "Dice": "None", "Type": "None", "Condition": "None"}
         ]
     },
     {
@@ -22,7 +23,8 @@
             {"Name": "Spell: Fire Ball", "Dice": "3d6", "Type": "Fire", "Condition": "spell slot"},
             {"Name": "Cantrip: Ray of Frost", "Dice": "3d4", "Type": "Ice", "Condition": "None"},
             {"Name": "Spell: Restoration", "Dice": "2d8", "Type": "Healing", "Condition": "adjacency"},
-            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"}
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"},
+            {"Name": "Do nothing", "Dice": "None", "Type": "None", "Condition": "None"}
         ]
     },
     {
@@ -35,7 +37,8 @@
             {"Name": "Attack: Flail attack", "Dice": "3d6", "Type": "Piercing", "Condition": "adjacency"},
             {"Name": "Spell: Revivify", "Description": "Revive another player", "Type": "Healing", "Condition": "spell slot"},
             {"Name": "Spell: Healing Word", "Dice": "2d8", "Type": "Healing", "Condition": "spell slot"},
-            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing","Condition": "potions"}
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing","Condition": "potions"},
+            {"Name": "Do nothing", "Dice": "None", "Type": "None", "Condition": "None"}
         ]
     },
     {
@@ -48,7 +51,8 @@
             {"Name": "Attack: Sword attack", "Dice": "4d6", "Type": "Slashing", "Condition": "adjacency"},
             {"Name": "Attack: Pommel strike", "Dice": "2d4", "Type": "Blunt", "Condition": "adjacency"},
             {"Name": "Attack: Forward strike", "Dice": "3d4", "Type": "Piercing", "Condition": "adjacency"},
-            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"}
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"},
+            {"Name": "Do nothing", "Dice": "None", "Type": "None", "Condition": "None"}
         ]
     },
     {
@@ -61,7 +65,8 @@
             {"Name": "Attack: Dagger attack", "Dice": "4d4", "Type": "Slashing", "Condition": "adjacency"},
             {"Name": "Attack: Stealth attack", "Dice": "4d6", "Type": "Slashing", "Condition": "adjacency"},
             {"Name": "Cantrip: Fire Bolt", "Dice": "3d4", "Type": "Fire", "Condition": "None"},
-            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"}
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"},
+            {"Name": "Do nothing", "Dice": "None", "Type": "None", "Condition": "None"}
         ]
     },
     {
@@ -74,7 +79,8 @@
             {"Name": "Attack: Ranged attack", "Dice": "3d6", "Type": "Piercing", "Condition": "None"},
             {"Name": "Spell: Ensnaring strike", "Dice": "2d4", "Type": "Piercing", "Condition": "spell slot"},
             {"Name": "Spell: Healing word", "Dice": "2d8", "Type": "Healing", "Condition": "spell slot"},
-            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"}
+            {"Name": "Potion: Use healing potion", "Dice": "2d6", "Type": "Healing", "Condition": "potions"},
+            {"Name": "Do nothing", "Dice": "None", "Type": "None", "Condition": "None"}
         ]
     }
 ]

@@ -378,11 +378,6 @@ class DnD(GameMaster):
             if abs(row_a - row_b) + abs(col_a - col_b) <= n:
                 return True
             
-        # NOTE: this does not yet check if a blocked cell is traversed
-        # needs to be implemented in the future
-
-        # check if they go to the same cell
-            
         return False
 
     def _on_parse_response(self, player, utterance: str):
@@ -397,6 +392,7 @@ class DnD(GameMaster):
         1. Targeting the boss with an attack it is resistant to.
         2. Choosing not to revive a dead adventurer when able to.
         3. Choosing to heal when above 70% hit points.
+        4. Doing nothing even though an action is possible.
         
         This is only done for adventurers and not the DM."""
 
@@ -406,18 +402,26 @@ class DnD(GameMaster):
             player_slots = self.player_a_slots
             player_hp = self.player_a_hp
             other_adv_hp = self.player_b_hp
+            player_pos = self.player_a_position
         if player == self.player_b:
             player_dict = self.player_b_dict
             player_cls = self.player_b.clss
             player_slots = self.player_b_slots
             player_hp = self.player_b_hp
             other_adv_hp = self.player_a_hp
+            player_pos = self.player_b_position
         if player == self.player_dm:
             raise Exception("Invalid player.")
 
         boss_res = self.boss_dict['Resistance']
+        boss_pos = self.boss_position
         action_list = player_dict['Actions']
         action_type = ""
+
+        # classes which can perform ranged attacks even without using a spell slot
+        ranged_classes = ["Wizard", "Sorcerer", "Ranger"]
+        # classes which can only attack in melee range
+        melee_classes = ["Fighter", "Cleric"]
 
         for i, a in enumerate(action_list):
             if a["Name"] == action:
@@ -434,21 +438,35 @@ class DnD(GameMaster):
                 return False
             
         # 3. Choosing to heal when above 70% HP
-        healers = ["Cleric", "Sorcerer", "Ranger"]
         max_hp = player_dict["Hit Points"]
-
         if (player_hp / max_hp) > 0.7:
-            if "potion" in action.lower():
-                return False
-            if player_cls in healers:
-                if action_type == "Healing":
-                    if target.lower() == "self":
-                        return False
-                    if player == self.player_a and target.lower() == "player a":
-                        return False
-                    elif player == self.player_b and target.lower() == "player b":
-                        return False
+            if action_type == "Healing":
+                if target.lower() == "self":
+                    return False
+                if player == self.player_a and target.lower() == "player a":
+                    return False
+                elif player == self.player_b and target.lower() == "player b":
+                    return False
+                
+        # 4. Doing nothing even though an action is possible
+        if action.lower() == "do nothing":
 
+            # Melee-only damage dealers
+            if player_cls in melee_classes:
+                # if the player COULD attack the boss (is in range) but decides to do nothing
+                if self._check_move(n=1, pos_1=player_pos, pos_2=boss_pos):
+                    return False
+            # Players able to deal damage at a distance
+            if player_cls in ranged_classes:
+                
+                if player_cls == "Ranger":  # ranger can always shoot
+                    return False
+                
+                # careful: cantrips don't cost spell slots but could be bad dmg type (allowed)
+                # therefore only judge it as a bad move not to attack if spells also available
+                else:
+                    if player_slots > 0:
+                        return False
         return True
 
     def _validate_player_response(self, player, utterance: str):
@@ -503,51 +521,52 @@ class DnD(GameMaster):
             key, value = line.split(': ', 1)
             response_dic[key] = value.rstrip()      # RONJA'S NOTE: maybe this will help current parsing issues
 
-        act_dice_roll = ""
-        for act_dic in player_dict["Actions"]:
-            if act_dic["Name"] == response_dic["ACTION"].rstrip():
-                act_dice_roll = act_dice_roll + act_dic["Dice"]
-        
-        if act_dice_roll == "":
-            self.invalid_response = True
-            action = {'type': 'error', 'content': 'invalid action'}
-            self.log_event(from_='GM', to='GM', action=action)
-            error_message = "The ACTION you picked is not one of the action options, please select the action from the options we give you."
-            return False, None, error_message            
+        if not response_dic["ACTION"].lower() == "do nothing":
 
-        dice_min = int(act_dice_roll[0])
-        dice_num = int(act_dice_roll[-1])
-        dice_max = dice_min * dice_num
+            act_dice_roll = ""
+            for act_dic in player_dict["Actions"]:
+                if act_dic["Name"] == response_dic["ACTION"].rstrip():
+                    act_dice_roll = act_dice_roll + act_dic["Dice"]
+            
+            if act_dice_roll == "":
+                self.invalid_response = True
+                action = {'type': 'error', 'content': 'invalid action'}
+                self.log_event(from_='GM', to='GM', action=action)
+                error_message = "The ACTION you picked is not one of the action options, please select the action from the options we give you."
+                return False, None, error_message            
 
-        # is the response a number?:
-        if response_dic["ROLL"].isdigit():
-            response_roll = int(response_dic["ROLL"])
-        else:
-            self.invalid_response = True
-            action = {'type': 'error', 'content': 'invalid format'}
-            self.log_event(from_='GM', to='GM', action=action)
-            error_message = "Incorrect Dice Roll. Please respond with only the sum of your dice roll result.\n For example, if your chosen action has “Dice: 3d4”, and you roll 3, 4, and 4, then your dice roll result is 11. So your response is ROLL: 11\n"
-            return False, None, error_message
+            dice_min = int(act_dice_roll[0])
+            dice_num = int(act_dice_roll[-1])
+            dice_max = dice_min * dice_num
 
-        #is the sum of the dice roll is possible?
-        if response_roll not in range(dice_min, dice_max + 1):
-            self.invalid_response = True
-            action = {'type': 'error', 'content': 'invalid roll'}
-            self.log_event(from_='GM', to='GM', action=action)
-            error_message = f"Your Dice Roll result is not between {dice_min} and {dice_max} and therefore not a result of the given dice."
-            return False, None, error_message
+            # is the response a number?:
+            if response_dic["ROLL"].isdigit():
+                response_roll = int(response_dic["ROLL"])
+            else:
+                self.invalid_response = True
+                action = {'type': 'error', 'content': 'invalid format'}
+                self.log_event(from_='GM', to='GM', action=action)
+                error_message = "Incorrect Dice Roll. Please respond with only the sum of your dice roll result.\n For example, if your chosen action has “Dice: 3d4”, and you roll 3, 4, and 4, then your dice roll result is 11. So your response is ROLL: 11\n"
+                return False, None, error_message
+
+            #is the sum of the dice roll is possible?
+            if response_roll not in range(dice_min, dice_max + 1):
+                self.invalid_response = True
+                action = {'type': 'error', 'content': 'invalid roll'}
+                self.log_event(from_='GM', to='GM', action=action)
+                error_message = f"Your Dice Roll result is not between {dice_min} and {dice_max} and therefore not a result of the given dice."
+                return False, None, error_message
  
-        # log if format was valid 
-        #self.log_to_self("valid format", "continue")
-
         # now check if response follows game rules
 
         # fetch contents of response to compare
         player_move = response_dic['MOVE']
-        action = response_dic['ACTION']
+        player_action = response_dic['ACTION']
         target = ' '.join(response_dic['TARGET'].split(' ')[:-2])
         target_pos = response_dic['TARGET'].split(' ')[-1]
-        roll = int(response_dic['ROLL'])
+        roll = response_dic['ROLL']
+        if roll.isdigit():
+            roll = int(roll)
 
         ####### Player cannot move to a cell that is occupied (blocked, or someone is already there.)
         if player == self.player_a:
@@ -616,7 +635,7 @@ class DnD(GameMaster):
 
         # check if input is contained in player's list of possible actions
         for action_dict in action_lst:
-            if action_dict['Name'] == action:
+            if action_dict['Name'] == player_action:
                 condition = action_dict['Condition']
                 if not condition == "None":
                     # spell slot condition requires at least spell slot remaining
@@ -647,7 +666,7 @@ class DnD(GameMaster):
                             return False, None, error_message
                     
         # some special cases
-        if action=="Spell: Revivify":   # revivify must be aimed at a dead adventurer
+        if player_action=="Spell: Revivify":   # revivify must be aimed at a dead adventurer
             if player==self.player_a:
                 if not target.lower()=='player b' and not self.player_b_hp==0:
                     self.invalid_response = True
@@ -663,8 +682,7 @@ class DnD(GameMaster):
                     self.log_event(from_='GM', to='GM', action=action)
                     return False, None, error_message
         
-        if action=="Potion: Use healing potion":    # cannot use potions on someone else
-            self.potions = self.potions - 1
+        if player_action=="Potion: Use healing potion":    # cannot use potions on someone else
             if not target.lower()=='self':
                 if player==self.player_a and not target.lower()=='player a':
                     self.invalid_response = True
@@ -678,7 +696,10 @@ class DnD(GameMaster):
                     action = {'type': 'error', 'content': 'invalid target'}
                     self.log_event(from_='GM', to='GM', action=action)
                     return False, None, error_message
-                
+                else:
+                    self.potions = self.potions - 1     # remove potion if use was valid 
+            else:
+                self.potions = self.potions - 1
         # if nothing was False until now, return LLM's reply to feed into next prompt
         # and update player position in the dungeon 
 
@@ -691,14 +712,14 @@ class DnD(GameMaster):
 
         reply_dict = {
             "Position" : player_move,
-            "Action" : action,
+            "Action" : player_action,
             "Target" : f"{target} in {target_pos}",
             "Roll" : roll
         }
 
         # check if the move was bad if it was an adventurer
         if not player == self.player_dm:
-            if self._score_move(player=player, action=action, target=target):
+            if self._score_move(player=player, action=player_action, target=target):
                 None
             else:
                 action = {'type': 'info', 'content': 'bad move'}

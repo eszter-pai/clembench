@@ -178,7 +178,7 @@ class DnDGameInstanceGenerator(GameInstanceGenerator):
                     response_dict = {
                         'MOVE: ': '(?:[A-E][1-5]|stay)',
                         'ACTION: ': '(?P<content>)',
-                        'TARGET: ': '(player a|player b|self|boss)\sin\s[A-E][1-5]',
+                        'TARGET: ': '(none|(player a|player b|self|boss)\sin\s[A-E][1-5])',
                         'ROLL: ': '(?:none|1[1-9]|2[0-4])' # highest dice is 4d6 so highest possible roll is 24
                     }
                     instance['response_format'] = response_dict

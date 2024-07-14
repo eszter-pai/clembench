@@ -19,6 +19,13 @@ ACTION: <an action>
 TARGET: <target of your action> in <target’s position>
 ROLL: <dice roll result, give only the sum and do not give individual roll results>
 
+"Do nothing" is also an action you can take. If you choose this, you must reply:
+
+MOVE: <position>
+ACTION: Do nothing
+TARGET: None
+ROLL: None
+
 A player can only move along adjacent cells in the dungeon and cannot move diagonally or over a cell that is blocked or occupied by another player. A player may move only a fraction of their stamina or not move at all. If you choose not to move, you must reaffirm your current position in your response. For example, if you are in position C3 and decide not to move, you must begin your answer with “MOVE: C3”.
 
 Actions have conditions that you need to meet in order to perform them. Keep this in mind when you choose your action. These are the possible conditions on an action:
@@ -27,7 +34,7 @@ Adjacency: You can only aim this action at a target in a position that is direct
 Spell slot: This action is of type “Spell” and uses a spell slot. You must have at least 1 spell slot remaining to perform this action.
 Potions: Using a healing potion requires your group to have at least 1 potion remaining.
 
-Actions also have types. There are 6 types: Healing, Fire, Ice, Piercing, Slashing, and Blunt. All types except for “Healing” indicate the manner in which damage is done to the target. All bosses have a resistance to one damage type. If an attack of a type matching their resistance is aimed at them, they will not take any damage regardless of the result of the dice roll. If the boss the adventurers are facing has fire resistance, for example, it would not be worthwhile choosing an action of type Fire. Finally, actions of type “Healing” restore the target’s hit points instead of depleting them. Healing is applied independently of armor class and can also be targeted at oneself, as opposed to other actions, which may only be targeted at others.
+Actions also have types. There are 7 types: Healing, Fire, Ice, Piercing, Slashing, Blunt, and None. All types except for “Healing” and "None" indicate the manner in which damage is done to the target. All bosses have a resistance to one damage type. If an attack of a type matching their resistance is aimed at them, they will not take any damage regardless of the result of the dice roll. If the boss the adventurers are facing has fire resistance, for example, it would not be worthwhile choosing an action of type Fire. Finally, actions of type “Healing” restore the target’s hit points instead of depleting them. Healing is applied independently of armor class and can also be targeted at oneself, as opposed to other actions, which may only be targeted at others.
 
 This game is played with dice which are labelled by the number or surfaces they have. For example, a d6 die has 6 surfaces. Dice are given in counts of how many times they are rolled. The result is a sum of each individual roll. For example, “3d6” means a d6 is rolled 3 times. If the 3 rolls result in 3, 4, and 2 respectively, the result of the 3d6 roll is 9 (since 3+4+2=9).
 
