@@ -3,12 +3,11 @@ import random
 class Dungeon:
     def __init__(self):
         self.grid = [['' for _ in range(5)] for _ in range(5)]
-        self.player_a_position = "A1" #these all should be none, for now this is for testing.
-        self.player_b_position = "A2"
-        self.player_dm_position = "E5"
-        self.cells_blocked = ["C2", "B3", "E4"]
+        self.player_a_position = None #these all should be none, for now this is for testing.
+        self.player_b_position = None
+        self.player_dm_position = None
+        self.cells_blocked = []
 
-"""
     def generate_positions(self):
 
         #player a and b need to spawned together and in a corner
@@ -56,20 +55,16 @@ class Dungeon:
         visited_from_a = bfs(self.player_a_position)
         return all(pos in visited_from_a for pos in all_positions)
 
-    def generate_description(self):
+    def generate_dungeon(self):
         self.generate_positions()
 
         def pos_to_str(pos):
 
             #turn position to string
             return chr(pos[0] + ord('A')) + str(pos[1] + 1)
-
-        description = (
-            f"The Player A is in {pos_to_str(self.player_a_position)}\n"
-            f"The Player B is in {pos_to_str(self.player_b_position)}\n"
-            f"The Monster is in {pos_to_str(self.player_dm_position)}\n"
-            f"The cells that are blocked: {', '.join(pos_to_str(pos) for pos in self.cells_blocked)}."
-        )
-        return description
-
-"""
+        
+        
+        self.player_a_position = pos_to_str(self.player_a_position)
+        self.player_b_position = pos_to_str(self.player_b_position)
+        self.player_dm_position = pos_to_str(self.player_dm_position)
+        self.cells_blocked = f"{', '.join(pos_to_str(pos) for pos in self.cells_blocked)}"

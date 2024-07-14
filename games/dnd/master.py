@@ -92,11 +92,13 @@ class DnD(GameMaster):
         self.player_a_slots = game_instance['player_a_dict']['Spell slots']
         self.player_b_slots = game_instance['player_b_dict']['Spell slots']
 
-        # NOTE: DUMMY SPAWN POSITIONS TO TEST OTHER THINGS
-        self.player_a_position = "A1"
-        self.player_b_position = "A2"
-        self.boss_position = "A3"
-        self.blocked_cells = "C2, B3, E4"
+        # random dungeon generation
+        dungeon = Dungeon()
+        dungeon.generate_dungeon()
+        self.player_a_position = dungeon.player_a_position
+        self.player_b_position = dungeon.player_b_position
+        self.boss_position = dungeon.player_dm_position
+        self.blocked_cells  = dungeon.cells_blocked
 
         # initialise common metrics
         self.request_counts = [0] * (self.max_turns + 1)
@@ -125,6 +127,7 @@ class DnD(GameMaster):
         self.current_turn += 1
         self.log_next_turn()
         self.invalid_response = False
+        bol = True
 
 
         # append the initial message of each player to their history
@@ -137,22 +140,99 @@ class DnD(GameMaster):
         action = {'type': 'send message', 'content': prompt_player_a}
         self.log_event(from_='GM', to='Player 1', action=action)
         answer_a = self.get_utterance('a')
-
-  
+        answer_a_cleaned = re.sub(r'[!.,]', '', answer_a)
+        if self.player_a.clss.lower() != answer_a_cleaned.lower():
+            bol, error_message = self.reprompt_initial(self.player_a, answer_a_cleaned, prompt_player_a)
+        if bol == False:
+            content = "game failed due to: " + error_message
+            action = {'type': 'info', 'content': content}
+            self.log_event(from_='GM', to='GM', action=action)
+            self.aborted = True
+            return None
 
 
         action = {'type': 'send message', 'content': prompt_player_b}
         self.log_event(from_='GM', to='Player 2', action=action)
 
         answer_b = self.get_utterance('b')
-
-
+        answer_b_cleaned = re.sub(r'[!.,]', '', answer_b)
+        if self.player_b.clss.lower() != answer_b_cleaned.lower():
+            bol, error_message = self.reprompt_initial(self.player_b, answer_b_cleaned, prompt_player_b)
+        if bol == False:
+            content = "game failed due to: " + error_message
+            action = {'type': 'info', 'content': content}
+            self.log_event(from_='GM', to='GM', action=action)
+            self.aborted = True
+            return None
 
 
         action = {'type': 'send message', 'content': prompt_player_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
-
         answer_dm = self.get_utterance('dm')
+        answer_dm_cleaned = re.sub(r'[!.,]', '', answer_dm)
+        if "Dungeon Master".lower() != answer_dm_cleaned.lower():
+            bol, error_message = self.reprompt_initial(self.player_dm, answer_dm_cleaned, prompt_player_dm)
+        if bol == False:
+            content = "game failed due to: " + error_message
+            action = {'type': 'info', 'content': content}
+            self.log_event(from_='GM', to='GM', action=action)
+            self.aborted = True
+            return None
+
+
+    def reprompt_initial(self, player, answer_cleaned, prompt):
+
+        attempts = 2
+        bol = False
+        error_message = ""
+
+        if player == self.player_a:
+            for attempt in range(attempts):
+                bol = self.player_a.clss.lower() == answer_cleaned.lower()
+                if bol:
+                    break
+                error_string =  "Please reply only with your class name. For example, if your assigned class is Wizard, you should only respond with one word 'Wizard'.\n"
+                new_attempt = error_string + prompt
+                action = {'type': 'send message', 'content': new_attempt}
+                self.log_event(from_='GM', to=f'Player 1', action=action)
+                answer = self.get_utterance('a')
+                answer_cleaned = re.sub(r'[!.,]', '', answer)
+                self.reprompt_count += 1
+                self.invalid_response = True
+
+
+        if player == self.player_b:
+            for attempt in range(attempts):
+                bol = self.player_b.clss.lower() == answer_cleaned.lower()
+                if bol:
+                    break
+                error_string =  "Please reply only with your class name. For example, if your assigned class is Wizard, you should only respond with one word 'Wizard'.\n"
+                new_attempt = error_string + prompt
+                action = {'type': 'send message', 'content': new_attempt}
+                self.log_event(from_='GM', to=f'Player 2', action=action)
+                answer = self.get_utterance('b')
+                answer_cleaned = re.sub(r'[!.,]', '', answer)
+                self.reprompt_count += 1
+                self.invalid_response = True
+
+        if player == self.player_dm:
+            for attempt in range(attempts):
+                bol = "Dungeon Master".lower() == answer_cleaned.lower()
+                if bol:
+                    break
+                error_string =  "Please reply only with your class name. For example, if you are a Dungeon Master, you should only respond with 'Dungeon Master'.\n"
+                new_attempt = error_string + prompt
+                action = {'type': 'send message', 'content': new_attempt}
+                self.log_event(from_='GM', to=f'Dungeon Master', action=action)
+                answer = self.get_utterance('dm')
+                answer_cleaned = re.sub(r'[!.,]', '', answer)
+                self.reprompt_count += 1
+                self.invalid_response = True
+
+        if bol == False:
+            error_message = "A player does not enter the class name with the correct format (Answer only with the name of the class)."
+
+        return bol, error_message
 
 
 
@@ -456,11 +536,6 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             error_message = f"Your Dice Roll result is not between {dice_min} and {dice_max} and therefore not a result of the given dice."
             return False, None, error_message
-
-
-        #Eszter's NOTE: since the following code (use regex block all incorrect format) cannot specify "this is an dice roll error/the dice roll number is not possible", 
-        # so i put dice roll validation on top (only reply with number?, the roll is within possilbe range?). But that also means that you don't have to use Dice roll regex to check format anymore.
-        # but if you have new regex for dice roll, we can try it. But i think we need to separate every pattern and give different error messages for each incorrect format (ex. "MOVE" is incorrect? "ACTION" is incorrect?...)
  
         # log if format was valid 
         #self.log_to_self("valid format", "continue")
@@ -474,12 +549,41 @@ class DnD(GameMaster):
         target_pos = response_dic['TARGET'].split(' ')[-1]
         roll = int(response_dic['ROLL'])
 
+        ####### Player cannot move to a cell that is occupied (blocked, or someone is already there.)
+        if player == self.player_a:
+            if player_move == self.player_b_position or player_move == self.boss_position:
+                self.invalid_response = True
+                error_message = "The position you move to is taken, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
+                action = {'type': 'error', 'content': 'invalid move'}
+                self.log_event(from_='GM', to='GM', action=action)
+   
+        if player == self.player_b:
+            if player_move == self.player_a_position or player_move == self.boss_position:
+                self.invalid_response = True
+                error_message = "The position you move to is taken, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
+                action = {'type': 'error', 'content': 'invalid move'}
+                self.log_event(from_='GM', to='GM', action=action)
+  
+        if player == self.player_dm:
+            if player_move == self.player_a_position or player_move == self.player_b_position:
+                self.invalid_response = True
+                error_message = "The position you move to is taken, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
+                action = {'type': 'error', 'content': 'invalid move'}
+                self.log_event(from_='GM', to='GM', action=action) 
+        
+        if player_move in self.blocked_cells:
+            self.invalid_response = True
+            error_message = "The position you move to is blocked, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
+            action = {'type': 'error', 'content': 'invalid move'}
+            self.log_event(from_='GM', to='GM', action=action)             
+
+ 
         ####### CHECK TARGETING VALIDITY
 
         # special case for DM
         if player == self.player_dm:
             if target.lower()=='boss':
-                self.invalid_response
+                self.invalid_response = True
                 error_message = "The Dungeon Master cannot target the Boss. Remember you are acting in the boss' place."
                 action = {'type': 'error', 'content': 'DM targets boss'}
                 self.log_event(from_='GM', to='GM', action=action)
@@ -531,7 +635,7 @@ class DnD(GameMaster):
                                 self.invalid_response = True
                                 action = {'type': 'error', 'content': 'target out of range'}
                                 self.log_event(from_='GM', to='GM', action=action)
-                                error_message = "Your target is out of range."
+                                error_message = "Your target is out of range. Remember if you choose to use a melee attack, please move to a position that is next to the target. For example, if you move to C2, you can only target B1, B2, B3, C1, C3, D1, D2, D3"
                                 return False, None, error_message
                     # potions condition requires potions remaining
                     elif condition == "potions" and self.potions == 0:
@@ -602,8 +706,8 @@ class DnD(GameMaster):
 
         error_message = "No Error"
         # log a valid move
-        action = {'type': 'info', 'content': 'valid move'}
-        self.log_event(from_='GM', to='GM', action=action)
+        # action = {'type': 'info', 'content': 'valid move'}
+        # self.log_event(from_='GM', to='GM', action=action)
         return True, reply_dict, error_message
 
     def reprompt(self, player, initial_answer, prompt):
@@ -712,6 +816,10 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
+        
+        if bol == True:
+            action = {'type': 'info', 'content': 'valid move'}
+            self.log_event(from_='GM', to='GM', action=action)
 
 
         # make action list for a into a single string:
@@ -764,7 +872,9 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
-
+        if bol == True:
+            action = {'type': 'info', 'content': 'valid move'}
+            self.log_event(from_='GM', to='GM', action=action)
 
 
         # information to parse for dm:
@@ -816,6 +926,9 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
+        if bol == True:
+            action = {'type': 'info', 'content': 'valid move'}
+            self.log_event(from_='GM', to='GM', action=action)
 
 
     def new_turn(self) -> None:
