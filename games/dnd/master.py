@@ -1291,13 +1291,12 @@ class DnDScorer(GameScorer):
         """Compute episode-level and turn-level scores (mandatory)."""
 
         max_turns = 15
-        invalid_response = False
         adventurers_won = False
         game_aborted = False
-        format_violations = 0
         rule_violations = 0
         valid_moves = 0
         bad_moves = 0
+        finite_resource_count = 0
         turn_scores = []
 
         for turn_idx, turn in enumerate(episode_interactions["turns"]):
@@ -1315,6 +1314,13 @@ class DnDScorer(GameScorer):
                     else:
                         rule_violations += 1
                         turn_score["parsed_request_count"] = turn_score["parsed_request_count"] + 1
+
+                        # track attempts to use a finite resource that has been depleted
+                        # (mistakenly logged both potion & spell slot uses when depleted with same error,
+                        # so only using this one to check)
+                        if action["content"] == "out of spell slots":
+                            finite_resource_count += 1
+
                         
                 if action["type"] == "info":
                     if action["content"] == "valid move":
@@ -1328,12 +1334,14 @@ class DnDScorer(GameScorer):
                     adventurers_won = True
 
             turn_score["rule_violation_count"] = rule_violations
+            turn_score["finite_resource_count"] = finite_resource_count
 
                 # log turn scores
             self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_VIOLATED, turn_score["violated_request_count"])
             self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT_PARSED, turn_score["parsed_request_count"])
             self.log_turn_score(turn_idx, ms.METRIC_REQUEST_COUNT, turn_score["request_count"])
             self.log_turn_score(turn_idx, "Rule Violations", turn_score["rule_violation_count"])
+            self.log_turn_score(turn_idx, "Depleted Resource", turn_score["finite_resource_count"])
             turn_scores.append(turn_score)
         
         # log episode scores
@@ -1356,6 +1364,9 @@ class DnDScorer(GameScorer):
         rule_violation_count = sum([turn["rule_violation_count"] for turn in turn_scores])
         self.log_episode_score("Rule Violations", rule_violation_count)
 
+        finite_res_count = sum([turn["finite_resource_count"] for turn in turn_scores])
+        self.log_episode_score("Rule Violations", finite_res_count)
+
         # Common metrics
         if game_aborted:  # if the game had to be aborted
             self.log_episode_score(ms.METRIC_ABORTED, 1)
@@ -1375,7 +1386,7 @@ class DnDScorer(GameScorer):
                 intel = 1 - (bad_moves/valid_moves)   # how many valid but bad moves did they make?
 
                 # bench score as harmonic mean of speed & intelligence
-                self.log_episode_score(ms.BENCH_SCORE, 1 - scipy.stats.hmean([speed, intel]))  
+                self.log_episode_score(ms.BENCH_SCORE, scipy.stats.hmean([speed, intel]))  
 
             else:
                 self.log_episode_score(ms.METRIC_SUCCESS, 0)
