@@ -50,9 +50,6 @@ class DnD(GameMaster):
         player_B_class = game_instance['player_b_class']
         player_dm_monster = game_instance['boss_dict']['Class Name']
 
-        # game mode
-        self.game_mode = game_instance['mode']
-
         # instantiate players
         self.player_a = Adventurer(self.model_a, "A", player_a_class)
         self.player_b = Adventurer(self.model_b, "B", player_B_class)
@@ -1057,13 +1054,15 @@ class DnD(GameMaster):
             for key, value in item.items():
                 action_a_string += f"{key}: {value}\n"
             action_a_string += ".....\n"
+        
 
-        add_info_a = ""
-        if self.game_mode == "guided":
-            if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
-                add_info_a = f"You and Player B have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_a_slots} times.\n"
-            else:
-                add_info_a = f"You and Player B have {self.potions} Potions in left.\n"  
+        # NOTE: if unguided, use this line:
+        # add_info_a = "" 
+        # NOTE: if guided, use these 4 lines:
+        if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
+            add_info_a = f"You and Player B have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_a_slots} times.\n"
+        else:
+            add_info_a = f"You and Player B have {self.potions} Potions in left.\n"  
 
         previous_turn_count = self.current_turn - 1
         replacements_a = {
@@ -1117,12 +1116,14 @@ class DnD(GameMaster):
                 action_b_string += f"{key}: {value}\n"
             action_b_string += ".....\n"
         
+        # NOTE: if unguided, use this line:
+        
         add_info_b = ""
-        if self.game_mode == "guided":
-            if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
-                add_info_b = f"You and Player A have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_b_slots} times.\n"
-            else:
-                add_info_b = f"You and Player A have {self.potions} Potions in left.\n"  
+        # NOTE: if guided, use these 4 lines:
+        if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
+            add_info_b = f"You and Player A have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_b_slots} times.\n"
+        else:
+            add_info_b = f"You and Player A have {self.potions} Potions in left.\n"  
 
         replacements_b = {
             "turn_count": previous_turn_count,
