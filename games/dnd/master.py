@@ -1365,7 +1365,7 @@ class DnDScorer(GameScorer):
         self.log_episode_score("Rule Violations", rule_violation_count)
 
         finite_res_count = sum([turn["finite_resource_count"] for turn in turn_scores])
-        self.log_episode_score("Rule Violations", finite_res_count)
+        self.log_episode_score("Depleted Resource", finite_res_count)
 
         # Common metrics
         if game_aborted:  # if the game had to be aborted
