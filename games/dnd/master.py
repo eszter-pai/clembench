@@ -44,6 +44,9 @@ class DnD(GameMaster):
 
         logger.info("_on_setup")
 
+        self.do_game_reprompt = True
+        self.do_game_guided = True
+
         # initialize players' classes: 
         # if GM does not give them class, then its null
         player_a_class = game_instance['player_a_class']
@@ -141,14 +144,22 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 1', action=action)
         answer_a = self.get_utterance('a')
         answer_a_cleaned = re.sub(r'[!.,]', '', answer_a)
-        if self.player_a.clss.lower() != answer_a_cleaned.lower():
-            bol, error_message = self.reprompt_initial(self.player_a, answer_a_cleaned, prompt_player_a)
-        if bol == False:
-            content = "game failed due to: " + error_message
-            action = {'type': 'info', 'content': content}
-            self.log_event(from_='GM', to='GM', action=action)
-            self.aborted = True
-            return None
+        if self.do_game_reprompt:
+            if self.player_a.clss.lower() != answer_a_cleaned.lower():
+                bol, error_message = self.reprompt_initial(self.player_a, answer_a_cleaned, prompt_player_a)
+            if bol == False:
+                content = "game failed due to: " + error_message
+                action = {'type': 'info', 'content': content}
+                self.log_event(from_='GM', to='GM', action=action)
+                self.aborted = True
+                return None
+        else:
+            if self.player_a.clss.lower() != answer_a_cleaned.lower():
+                content = "game failed due to: A player does not enter the class name with the correct format (Answer only with the name of the class)"
+                action = {'type': 'info', 'content': content}
+                self.log_event(from_='GM', to='GM', action=action)
+                self.aborted = True
+                return None            
 
 
         action = {'type': 'send message', 'content': prompt_player_b}
@@ -156,28 +167,46 @@ class DnD(GameMaster):
 
         answer_b = self.get_utterance('b')
         answer_b_cleaned = re.sub(r'[!.,]', '', answer_b)
-        if self.player_b.clss.lower() != answer_b_cleaned.lower():
-            bol, error_message = self.reprompt_initial(self.player_b, answer_b_cleaned, prompt_player_b)
-        if bol == False:
-            content = "game failed due to: " + error_message
-            action = {'type': 'info', 'content': content}
-            self.log_event(from_='GM', to='GM', action=action)
-            self.aborted = True
-            return None
+        if self.do_game_reprompt:
+            if self.player_b.clss.lower() != answer_b_cleaned.lower():
+                bol, error_message = self.reprompt_initial(self.player_b, answer_b_cleaned, prompt_player_b)
+            if bol == False:
+                content = "game failed due to: " + error_message
+                action = {'type': 'info', 'content': content}
+                self.log_event(from_='GM', to='GM', action=action)
+                self.aborted = True
+                return None
+        else:
+            if self.player_b.clss.lower() != answer_b_cleaned.lower():
+                content = "game failed due to: A player does not enter the class name with the correct format (Answer only with the name of the class)"
+                action = {'type': 'info', 'content': content}
+                self.log_event(from_='GM', to='GM', action=action)
+                self.aborted = True
+                return None
+
 
 
         action = {'type': 'send message', 'content': prompt_player_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
         answer_dm = self.get_utterance('dm')
         answer_dm_cleaned = re.sub(r'[!.,]', '', answer_dm)
-        if "Dungeon Master".lower() != answer_dm_cleaned.lower():
-            bol, error_message = self.reprompt_initial(self.player_dm, answer_dm_cleaned, prompt_player_dm)
-        if bol == False:
-            content = "game failed due to: " + error_message
-            action = {'type': 'info', 'content': content}
-            self.log_event(from_='GM', to='GM', action=action)
-            self.aborted = True
-            return None
+
+        if self.do_game_reprompt:
+            if "Dungeon Master".lower() != answer_dm_cleaned.lower():
+                bol, error_message = self.reprompt_initial(self.player_dm, answer_dm_cleaned, prompt_player_dm)
+            if bol == False:
+                content = "game failed due to: " + error_message
+                action = {'type': 'info', 'content': content}
+                self.log_event(from_='GM', to='GM', action=action)
+                self.aborted = True
+                return None
+        else:
+            if "Dungeon Master".lower() != answer_dm_cleaned.lower():
+                content = "game failed due to: A player does not enter the class name with the correct format (Answer only with the name of the class)"
+                action = {'type': 'info', 'content': content}
+                self.log_event(from_='GM', to='GM', action=action)
+                self.aborted = True
+                return None
 
 
     def reprompt_initial(self, player, answer_cleaned, prompt):
@@ -842,8 +871,11 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 1', action=action)
 
         answer_a = self.get_utterance('a')
-        bol, reply_dict_a, error_message = self.reprompt(self.player_a, answer_a, combat_prompt_a)
-        
+        if self.do_game_reprompt:
+            bol, reply_dict_a, error_message = self.reprompt(self.player_a, answer_a, combat_prompt_a)
+        else:
+            bol, reply_dict_a, error_message = self._validate_player_response(self.player_a, answer_a)
+
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -894,7 +926,10 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 2', action=action)
 
         answer_b = self.get_utterance('b')
-        bol, reply_dict_b, error_message = self.reprompt(self.player_b, answer_b, combat_prompt_b)
+        if self.do_game_reprompt:
+            bol, reply_dict_b, error_message = self.reprompt(self.player_b, answer_b, combat_prompt_b)
+        else:
+            bol, reply_dict_b, error_message = self._validate_player_response(self.player_b, answer_b)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -938,7 +973,10 @@ class DnD(GameMaster):
         action = {'type': 'send message', 'content': combat_prompt_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
         answer_dm = self.get_utterance('dm')
-        bol, reply_dict_dm, error_message = self.reprompt(self.player_dm, answer_dm, combat_prompt_dm)
+        if self.do_game_reprompt:
+            bol, reply_dict_dm, error_message = self.reprompt(self.player_dm, answer_dm, combat_prompt_dm)
+        else:
+            bol, reply_dict_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message 
@@ -1059,10 +1097,13 @@ class DnD(GameMaster):
         # NOTE: if unguided, use this line:
         # add_info_a = "" 
         # NOTE: if guided, use these 4 lines:
-        if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
-            add_info_a = f"You and Player B have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_a_slots} times.\n"
+        if self.do_game_guided:
+            if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
+                add_info_a = f"You and Player B have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_a_slots} times.\n"
+            else:
+                add_info_a = f"You and Player B have {self.potions} Potions in left.\n"  
         else:
-            add_info_a = f"You and Player B have {self.potions} Potions in left.\n"  
+            add_info_a = "" 
 
         previous_turn_count = self.current_turn - 1
         replacements_a = {
@@ -1097,7 +1138,10 @@ class DnD(GameMaster):
         answer_a = self.get_utterance('a')
 
         # update reply_a dict, because this info needs to be passed on
-        bol, reply_a, error_message = self.reprompt(self.player_a, answer_a, newturn_prompt_a)
+        if self.do_game_reprompt:
+            bol, reply_a, error_message = self.reprompt(self.player_a, answer_a, newturn_prompt_a)
+        else:
+            bol, reply_a, error_message = self._validate_player_response(self.player_a, answer_a)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -1116,14 +1160,14 @@ class DnD(GameMaster):
                 action_b_string += f"{key}: {value}\n"
             action_b_string += ".....\n"
         
-        # NOTE: if unguided, use this line:
-        
-        add_info_b = ""
-        # NOTE: if guided, use these 4 lines:
-        if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
-            add_info_b = f"You and Player A have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_b_slots} times.\n"
+
+        if self.do_game_guided:
+            if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
+                add_info_b = f"You and Player A have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_b_slots} times.\n"
+            else:
+                add_info_b = f"You and Player A have {self.potions} Potions in left.\n"  
         else:
-            add_info_b = f"You and Player A have {self.potions} Potions in left.\n"  
+            add_info_b = ""
 
         replacements_b = {
             "turn_count": previous_turn_count,
@@ -1157,7 +1201,10 @@ class DnD(GameMaster):
         answer_b = self.get_utterance('b')
 
         # remember now player B move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
-        bol, reply_b, error_message = self.reprompt(self.player_b, answer_b, newturn_prompt_b)
+        if self.do_game_reprompt:
+            bol, reply_b, error_message = self.reprompt(self.player_b, answer_b, newturn_prompt_b)
+        else:
+            bol, reply_b, error_message = self._validate_player_response(self.player_b, answer_b)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -1208,8 +1255,12 @@ class DnD(GameMaster):
         answer_dm = self.get_utterance('dm')
 
         # remember now player DM move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
-        bol, reply_dm, error_message = self.reprompt(self.player_dm, answer_dm, newturn_prompt_dm)    
+        if self.do_game_reprompt:
+            bol, reply_dm, error_message = self.reprompt(self.player_dm, answer_dm, newturn_prompt_dm)    
+        else:
+            bol, reply_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
         # after reprompt and the response is still invalid, abort game
+
         if bol == False:
             content = "game failed due to: " + error_message
             action = {'type': 'info', 'content': content}
