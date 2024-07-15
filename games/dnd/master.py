@@ -531,6 +531,7 @@ class DnD(GameMaster):
             act_dice_roll = ""
             for act_dic in player_dict["Actions"]:
                 if act_dic["Name"] == response_dic["ACTION"].rstrip():
+                    print(act_dic)
                     act_dice_roll = act_dice_roll + act_dic["Dice"]
             
             if act_dice_roll == "":
@@ -573,6 +574,19 @@ class DnD(GameMaster):
         if roll.isdigit():
             roll = int(roll)
 
+        # is the position inside the grid?
+        rows = 'ABCDE'
+        cols = '12345'
+        row, col = player_move[0], player_move[1]
+
+        if not row in rows and col in cols:
+            self.invalid_response = True
+            error_message = "The position you move to is not inside of the 5*5 grid dungeon. Remember the dungeon is a 5*5 grid, with rows from A-E, and columns from 1-5."
+            action = {'type': 'error', 'content': 'invalid move'}
+            self.log_event(from_='GM', to='GM', action=action)
+            return False, None, error_message
+
+
         ####### Player cannot move to a cell that is occupied (blocked, or someone is already there.)
         if player == self.player_a:
             if player_move == self.player_b_position or player_move == self.boss_position:
@@ -580,6 +594,7 @@ class DnD(GameMaster):
                 error_message = "The position you move to is taken, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
                 action = {'type': 'error', 'content': 'invalid move'}
                 self.log_event(from_='GM', to='GM', action=action)
+                return False, None, error_message
    
         if player == self.player_b:
             if player_move == self.player_a_position or player_move == self.boss_position:
@@ -587,6 +602,7 @@ class DnD(GameMaster):
                 error_message = "The position you move to is taken, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
                 action = {'type': 'error', 'content': 'invalid move'}
                 self.log_event(from_='GM', to='GM', action=action)
+                return False, None, error_message
   
         if player == self.player_dm:
             if player_move == self.player_a_position or player_move == self.player_b_position:
@@ -594,12 +610,14 @@ class DnD(GameMaster):
                 error_message = "The position you move to is taken, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
                 action = {'type': 'error', 'content': 'invalid move'}
                 self.log_event(from_='GM', to='GM', action=action) 
+                return False, None, error_message
         
         if player_move in self.blocked_cells:
             self.invalid_response = True
             error_message = "The position you move to is blocked, please try again. Remember: if the cell is taken by another player or is blocked, then you cannot move to there. Your stamina also determines the steps you can take."
             action = {'type': 'error', 'content': 'invalid move'}
-            self.log_event(from_='GM', to='GM', action=action)             
+            self.log_event(from_='GM', to='GM', action=action)    
+            return False, None, error_message         
 
  
         ####### CHECK TARGETING VALIDITY
@@ -659,7 +677,7 @@ class DnD(GameMaster):
                                 self.invalid_response = True
                                 action = {'type': 'error', 'content': 'target out of range'}
                                 self.log_event(from_='GM', to='GM', action=action)
-                                error_message = "Your target is out of range. Remember if you choose to use a melee attack, please move to a position that is next to the target. For example, if you move to C2, you can only target B1, B2, B3, C1, C3, D1, D2, D3"
+                                error_message = "Your target is out of range. Remember if you choose to use a melee attack, please move to a position that is next to the target. For example, if you move to C2, you can only target B2, C1, C3, D2"
                                 return False, None, error_message
                     # potions condition requires potions remaining
                     elif condition == "potions" and self.potions == 0:
@@ -827,17 +845,7 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 1', action=action)
 
         answer_a = self.get_utterance('a')
-        bol, reply_dict_a, error_message = self._validate_player_response(self.player_a, answer_a)
-
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_combat_a = error_string + combat_prompt_a
-            self.player_a.history.append({'role': 'user', 'content': new_attempt_combat_a})
-            action = {'type': 'send message', 'content': new_attempt_combat_a}
-            self.log_event(from_='GM', to='Player 1', action=action)
-            answer_a = self.get_utterance('a')
-            bol, reply_dict_a, error_message = self._validate_player_response(self.player_a, answer_a)
+        bol, reply_dict_a, error_message = self.reprompt(self.player_a, answer_a, combat_prompt_a)
         
         # after reprompt and the response is still invalid, abort game
         if bol == False:
@@ -889,18 +897,7 @@ class DnD(GameMaster):
         self.log_event(from_='GM', to='Player 2', action=action)
 
         answer_b = self.get_utterance('b')
-        bol, reply_dict_b, error_message = self._validate_player_response(self.player_b, answer_b)
-
-
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_combat_b = error_string + combat_prompt_b
-            self.player_b.history.append({'role': 'user', 'content': new_attempt_combat_b})
-            action = {'type': 'send message', 'content': new_attempt_combat_b}
-            self.log_event(from_='GM', to='Player 2', action=action)
-            answer_a = self.get_utterance('b')
-            bol, reply_dict_b, error_message = self._validate_player_response(self.player_b, answer_b)
-        
+        bol, reply_dict_b, error_message = self.reprompt(self.player_b, answer_b, combat_prompt_b)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -944,17 +941,7 @@ class DnD(GameMaster):
         action = {'type': 'send message', 'content': combat_prompt_dm}
         self.log_event(from_='GM', to='Dungeon Master', action=action)
         answer_dm = self.get_utterance('dm')
-        bol, reply_dict_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
-
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_combat_dm = error_string + combat_prompt_dm
-            self.player_dm.history.append({'role': 'user', 'content': new_attempt_combat_dm})
-            action = {'type': 'send message', 'content': new_attempt_combat_dm}
-            self.log_event(from_='GM', to='Dungeon Master', action=action)
-            answer_dm = self.get_utterance('dm')
-            bol, reply_dict_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
-        
+        bol, reply_dict_dm, error_message = self.reprompt(self.player_dm, answer_dm, combat_prompt_dm)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message 
@@ -1111,19 +1098,7 @@ class DnD(GameMaster):
         answer_a = self.get_utterance('a')
 
         # update reply_a dict, because this info needs to be passed on
-        bol, reply_a, error_message = self._validate_player_response(self.player_a, answer_a)
-
-
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_newturn_a = error_string + newturn_prompt_a
-            self.player_a.history.append({'role': 'user', 'content': new_attempt_newturn_a})
-            action = {'type': 'send message', 'content': new_attempt_newturn_a}
-            self.log_event(from_='GM', to='Player 1', action=action)
-            answer_a = self.get_utterance('a')
-            bol, reply_a, error_message = self._validate_player_response(self.player_a, answer_a)
-        
+        bol, reply_a, error_message = self.reprompt(self.player_a, answer_a, newturn_prompt_a)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -1181,18 +1156,7 @@ class DnD(GameMaster):
         answer_b = self.get_utterance('b')
 
         # remember now player B move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
-        bol, reply_b, error_message = self._validate_player_response(self.player_b, answer_b)
-
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_newturn_b = error_string + newturn_prompt_a
-            self.player_b.history.append({'role': 'user', 'content': new_attempt_newturn_b})
-            action = {'type': 'send message', 'content': new_attempt_newturn_b}
-            self.log_event(from_='GM', to='Player 2', action=action)
-            answer_b = self.get_utterance('b')
-            bol, reply_b, error_message = self._validate_player_response(self.player_b, answer_b)
-        
+        bol, reply_b, error_message = self.reprompt(self.player_b, answer_b, newturn_prompt_b)
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
@@ -1243,18 +1207,7 @@ class DnD(GameMaster):
         answer_dm = self.get_utterance('dm')
 
         # remember now player DM move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
-        bol, reply_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
-        # if the bol is Flase (the response is invalid due to the reason described in error message)
-
-        if bol == False:
-            error_string = "Please try again. The problem of your response is: "+ error_message + "\n"
-            new_attempt_newturn_dm = error_string + newturn_prompt_dm
-            self.player_dm.history.append({'role': 'user', 'content': new_attempt_newturn_dm})
-            action = {'type': 'send message', 'content': new_attempt_newturn_dm}
-            self.log_event(from_='GM', to='Dungeon Master', action=action)
-            answer_dm = self.get_utterance('dm')
-            bol, reply_dm, error_message = self._validate_player_response(self.player_dm, answer_dm)
-        
+        bol, reply_dm, error_message = self.reprompt(self.player_dm, answer_dm, newturn_prompt_dm)    
         # after reprompt and the response is still invalid, abort game
         if bol == False:
             content = "game failed due to: " + error_message
