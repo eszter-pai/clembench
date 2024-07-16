@@ -407,7 +407,9 @@ class DnD(GameMaster):
         rows = 'ABCDE'
         cols = '12345'
 
-        # get row & column indeces
+        # get row & column 
+        print("pos_1: " + pos_1)
+        print("pos_2: " + pos_2)
         row_a, col_a = rows.index(pos_1[0]), cols.index(pos_1[1])
         row_b, col_b = rows.index(pos_2[0]), cols.index(pos_2[1])
 
@@ -936,6 +938,9 @@ class DnD(GameMaster):
             else:
                 self.boss_hp = self.boss_hp - a_damage_done
 
+        if self.boss_hp <= 0:
+            return None
+
         # update boss info to give players
         boss_info = f"Position: {self.boss_position}\n"
         for key, value in self.boss_dict.items():
@@ -1008,6 +1013,8 @@ class DnD(GameMaster):
             else:
                 self.boss_hp = self.boss_hp - b_damage_done
 
+        if self.boss_hp <= 0:
+            return None
         # update boss info to give players
         boss_info = f"Position: {self.boss_position}\n"
         for key, value in self.boss_dict.items():
@@ -1227,7 +1234,8 @@ class DnD(GameMaster):
                 self.boss_hp = 0
             else:
                 self.boss_hp = self.boss_hp - a_damage_done
-
+        if self.boss_hp <= 0:
+            return None
         # remember now player A move, so the position is already updated inside _validate_player_response, and this info needs to be passed on:
         a_stats_string = f"Hit Points: {self.player_a_hp}\nPosition: {self.player_a_position}\nSpell slots: {self.player_a_slots}"
         boss_stats_string = f"Hit Points: {self.boss_hp}\nPosition: {self.boss_position}"
@@ -1302,7 +1310,8 @@ class DnD(GameMaster):
                 self.boss_hp = 0
             else:
                 self.boss_hp = self.boss_hp - b_damage_done
-
+        if self.boss_hp <= 0:
+            return None
         b_stats_string = f"Hit Points: {self.player_b_hp}\nPosition: {self.player_b_position}\nSpell slots: {self.player_b_slots}"
         boss_stats_string = f"Hit Points: {self.boss_hp}\nPosition: {self.boss_position}"
 
@@ -1358,7 +1367,6 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
-
 
 
 
