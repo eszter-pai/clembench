@@ -793,49 +793,73 @@ class DnD(GameMaster):
         return True, reply_dict, error_message
 
     def reprompt(self, player, initial_answer, prompt):
-        attempts = 2
+        bol, reply_dict, error_message = self._validate_player_response(player, initial_answer)
         if player == self.player_a:
-            for attempt in range(attempts):
-                bol, reply_dict, error_message = self._validate_player_response(player, initial_answer)
-                if bol:
-                    break
+            if bol == False:
                 error_string = f"Please try again. The problem of your response is: {error_message}\n"
                 new_attempt = error_string + prompt
                 player.history.append({'role': 'user', 'content': new_attempt})
                 action = {'type': 'send message', 'content': new_attempt}
                 self.log_event(from_='GM', to=f'Player 1', action=action)
-                initial_answer = self.get_utterance('a')
+                answer = self.get_utterance('a')
                 self.reprompt_count += 1
+                bol, reply_dict, error_message = self._validate_player_response(player, answer)
+                if bol == False:
+                    error_string = f"Please try again. The problem of your response is: {error_message}\n"
+                    new_attempt = error_string + prompt
+                    player.history.append({'role': 'user', 'content': new_attempt})
+                    action = {'type': 'send message', 'content': new_attempt}
+                    self.log_event(from_='GM', to=f'Player 1', action=action)
+                    new_answer = self.get_utterance('a')
+                    self.reprompt_count += 1
+                    bol, reply_dict, error_message = self._validate_player_response(player, new_answer)
+                    return bol, reply_dict, error_message
 
         if player == self.player_b:
-            for attempt in range(attempts):
-                bol, reply_dict, error_message = self._validate_player_response(player, initial_answer)
-                if bol:
-                    break
+            if bol == False:
                 error_string = f"Please try again. The problem of your response is: {error_message}\n"
                 new_attempt = error_string + prompt
                 player.history.append({'role': 'user', 'content': new_attempt})
                 action = {'type': 'send message', 'content': new_attempt}
                 self.log_event(from_='GM', to=f'Player 2', action=action)
-                initial_answer = self.get_utterance('b')
+                answer = self.get_utterance('b')
                 self.reprompt_count += 1
+                bol, reply_dict, error_message = self._validate_player_response(player, answer)
+                if bol == False:
+                    error_string = f"Please try again. The problem of your response is: {error_message}\n"
+                    new_attempt = error_string + prompt
+                    player.history.append({'role': 'user', 'content': new_attempt})
+                    action = {'type': 'send message', 'content': new_attempt}
+                    self.log_event(from_='GM', to=f'Player 2', action=action)
+                    new_answer = self.get_utterance('b')
+                    self.reprompt_count += 1
+                    bol, reply_dict, error_message = self._validate_player_response(player, new_answer)
+                    return bol, reply_dict, error_message
 
         if player == self.player_dm:
-            for attempt in range(attempts):
-                bol, reply_dict, error_message = self._validate_player_response(player, initial_answer)
-                if bol:
-                    break
+            if bol == False:
                 error_string = f"Please try again. The problem of your response is: {error_message}\n"
                 new_attempt = error_string + prompt
                 player.history.append({'role': 'user', 'content': new_attempt})
                 action = {'type': 'send message', 'content': new_attempt}
                 self.log_event(from_='GM', to=f'Dungeon Master', action=action)
-                initial_answer = self.get_utterance("dm")
+                answer = self.get_utterance('dm')
                 self.reprompt_count += 1
+                bol, reply_dict, error_message = self._validate_player_response(player, answer)
+                if bol == False:
+                    error_string = f"Please try again. The problem of your response is: {error_message}\n"
+                    new_attempt = error_string + prompt
+                    player.history.append({'role': 'user', 'content': new_attempt})
+                    action = {'type': 'send message', 'content': new_attempt}
+                    self.log_event(from_='GM', to=f'Dungeon Master', action=action)
+                    new_answer = self.get_utterance('dm')
+                    self.reprompt_count += 1
+                    bol, reply_dict, error_message = self._validate_player_response(player, new_answer)
+                    return bol, reply_dict, error_message
 
+        if bol == True: 
+            return bol, reply_dict, error_message
 
-
-        return bol, reply_dict, error_message
 
     def combat_turn(self) -> None:
 
