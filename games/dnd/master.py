@@ -56,6 +56,8 @@ class DnD(GameMaster):
         # instantiate players
         self.player_a = Adventurer(self.model_a, "A", player_a_class)
         self.player_b = Adventurer(self.model_b, "B", player_B_class)
+        #self.player_a = Adventurer(self.model_a, "A", "Fighter")
+        #self.player_b = Adventurer(self.model_b, "B", "Fighter")
         self.player_dm = DungeonMaster(self.model_dm, "DM", player_dm_monster)
 
         # all classes/boss of each player: self.player_a.clss | self.player_b.clss | self.player_dm.clss
@@ -99,9 +101,13 @@ class DnD(GameMaster):
         dungeon = Dungeon()
         dungeon.generate_dungeon()
         self.player_a_position = dungeon.player_a_position
+        # self.player_a_position = "A1"
         self.player_b_position = dungeon.player_b_position
+        # self.player_b_position = "B1"
         self.boss_position = dungeon.player_dm_position
+        # self.boss_position = "A3"
         self.blocked_cells  = dungeon.cells_blocked
+        # self.blocked_cells = "A5, C4"
 
         # initialise common metrics
         self.request_counts = [0] * (self.max_turns + 1)
@@ -575,6 +581,7 @@ class DnD(GameMaster):
             if response_dic["ROLL"].isdigit():
                 response_roll = int(response_dic["ROLL"])
             else:
+
                 self.invalid_response = True
                 action = {'type': 'error', 'content': 'invalid format'}
                 self.log_event(from_='GM', to='GM', action=action)

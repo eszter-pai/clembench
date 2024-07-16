@@ -15,9 +15,9 @@ class Adventurer(Player):
         """Return a mock message with the suitable format."""
 
         if turn_idx == 1:
-            return "Wizard"
+            return "Fighter"
         else:
-            return "MOVE: A1\nACTION: Attack: Quarterstaff attack\nTARGET: Boss in A3\nROLL: 7"
+            return "MOVE: A2\nACTION: Attack: Pommel strike\nTARGET: Boss in A3\nROLL: 7"
           #  return "MOVE: A1\nACTION: Cantrip: Fire Bolt\nTARGET: boss in D3\nROLL: 12"
 
 class DungeonMaster(Player):
