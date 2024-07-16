@@ -783,9 +783,8 @@ class DnD(GameMaster):
 
         # check if the move was bad if it was an adventurer
         if not player == self.player_dm:
-            if self._score_move(player=player, action=player_action, target=target):
-                None
-            else:
+            intel = self._score_move(player=player, action=player_action, target=target)
+            if intel == False:
                 action = {'type': 'info', 'content': 'bad move'}
                 self.log_event(from_='GM', to='GM', action=action)
 
@@ -1329,7 +1328,7 @@ class DnD(GameMaster):
 
         b_damage_done = 0 #damage done in this turn
         if reply_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
-            b_damage_done = b_damage_done + reply_a["Roll"]
+            b_damage_done = b_damage_done + int(reply_b["Roll"])
 
         act_type_b = ""
         for act in self.player_b_dict["Actions"]:
@@ -1525,9 +1524,11 @@ class DnDScorer(GameScorer):
             if adventurers_won == True:
                 self.log_episode_score(ms.METRIC_SUCCESS, 1)
                 self.log_episode_score(ms.METRIC_LOSE, 0)
-
+                print(f"bad moves: {bad_moves}, valid_moves: {valid_moves}")
                 speed = 1 - (played_turns / max_turns)  # how fast did they beat the boss?
                 intel = 1 - (bad_moves/valid_moves)   # how many valid but bad moves did they make?
+
+                print(speed, intel)
 
                 # bench score as harmonic mean of speed & intelligence
                 self.log_episode_score(ms.BENCH_SCORE, scipy.stats.hmean([speed, intel]))  
