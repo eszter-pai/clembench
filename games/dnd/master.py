@@ -87,6 +87,7 @@ class DnD(GameMaster):
         self.player_a_dict = game_instance['player_a_dict']
         self.player_b_dict = game_instance['player_b_dict']
         self.boss_dict = game_instance['boss_dict']
+        self.boss_resist = game_instance['boss_dict']["Resistance"]
         self.response_dict = game_instance['response_format']
 
         # initialize hp counts which must be updated throughout game
@@ -931,6 +932,15 @@ class DnD(GameMaster):
         if reply_dict_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
             a_damage_done = a_damage_done + reply_dict_a["Roll"]
 
+        # get the type of the action, and see if it matches the boss resistance 
+        act_type_a = ""
+        for act in self.player_a_dict["Actions"]:
+            if act["Name"] == reply_dict_a["Action"]:
+                act_type_a += act["Type"]
+
+        if act_type_a == self.boss_resist:
+            a_damage_done = 0
+
         if a_damage_done >= dm_armor:
             # make sure hp doesn't drop below 0
             if self.boss_hp - a_damage_done <= 0:
@@ -1005,6 +1015,14 @@ class DnD(GameMaster):
         b_damage_done = 0 #damage done in this turn
         if reply_dict_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
             b_damage_done = b_damage_done + reply_dict_b["Roll"]
+
+        act_type_b = ""
+        for act in self.player_b_dict["Actions"]:
+            if act["Name"] == reply_dict_b["Action"]:
+                act_type_b += act["Type"]
+
+        if act_type_b == self.boss_resist:
+            b_damage_done = 0
 
         if b_damage_done >= dm_armor:
             # make sure hp doesn't drop below 0
@@ -1228,6 +1246,15 @@ class DnD(GameMaster):
         if reply_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
             a_damage_done = a_damage_done + reply_a["Roll"]
 
+        act_type_a = ""
+        for act in self.player_a_dict["Actions"]:
+            if act["Name"] == reply_a["Action"]:
+                act_type_a += act["Type"]
+
+        if act_type_a == self.boss_resist:
+            a_damage_done = 0
+
+
         if a_damage_done >= dm_armor:
             # make sure hp doesn't drop below 0
             if self.boss_hp - a_damage_done <= 0:
@@ -1303,6 +1330,14 @@ class DnD(GameMaster):
         b_damage_done = 0 #damage done in this turn
         if reply_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
             b_damage_done = b_damage_done + reply_a["Roll"]
+
+        act_type_b = ""
+        for act in self.player_b_dict["Actions"]:
+            if act["Name"] == reply_b["Action"]:
+                act_type_b += act["Type"]
+
+        if act_type_b == self.boss_resist:
+            b_damage_done = 0
 
         if b_damage_done >= dm_armor:
             # make sure hp doesn't drop below 0
