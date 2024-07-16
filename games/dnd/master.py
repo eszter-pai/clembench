@@ -297,6 +297,11 @@ class DnD(GameMaster):
         if self.boss_hp <= 0:
             action = {'type': 'info', 'content': 'boss defeated'}
             self.log_event(from_='GM', to='GM', action=action)
+
+        if self.player_a_hp <= 0 and self.player_b_hp <= 0:
+            action = {'type': 'info', 'content': 'all players died'}
+            self.log_event(from_='GM', to='GM', action=action)
+
         # log a final message saying that the game did came to an end
         action = {'type': 'info', 'content': 'end game'}
         self.log_event(from_='GM', to='GM', action=action)
@@ -894,8 +899,28 @@ class DnD(GameMaster):
         if bol == True:
             action = {'type': 'info', 'content': 'valid move'}
             self.log_event(from_='GM', to='GM', action=action)
+            
+        dm_armor = self.boss_dict["Armor Class"]
+        a_damage_done = 0 #damage done in this turn
+        if reply_dict_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
+            a_damage_done = a_damage_done + reply_dict_a["Roll"]
 
+        if a_damage_done >= dm_armor:
+            # make sure hp doesn't drop below 0
+            if self.boss_hp - a_damage_done <= 0:
+                self.boss_hp = 0
+            else:
+                self.boss_hp = self.boss_hp - a_damage_done
 
+        # update boss info to give players
+        boss_info = f"Position: {self.boss_position}\n"
+        for key, value in self.boss_dict.items():
+
+            if key == "Hit Points":
+                boss_info += f"Hit Points: {self.boss_hp}\n"
+            # hide certain info from players (for now)
+            if not key == "Actions" and not key == "Difficulty" and not key == "Hit Points":
+                boss_info += f"{key}: {value}\n"
         # make action list for a into a single string:
         action_b_string = "\n"
         for item in self.player_b_dict['Actions']:
@@ -948,7 +973,25 @@ class DnD(GameMaster):
             action = {'type': 'info', 'content': 'valid move'}
             self.log_event(from_='GM', to='GM', action=action)
 
+        b_damage_done = 0 #damage done in this turn
+        if reply_dict_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
+            b_damage_done = b_damage_done + reply_dict_b["Roll"]
 
+        if b_damage_done >= dm_armor:
+            # make sure hp doesn't drop below 0
+            if self.boss_hp - b_damage_done <= 0:
+                self.boss_hp = 0
+            else:
+                self.boss_hp = self.boss_hp - b_damage_done
+
+        # update boss info to give players
+        boss_info = f"Position: {self.boss_position}\n"
+        for key, value in self.boss_dict.items():
+            if key == "Hit Points":
+                boss_info += f"Hit Points: {self.boss_hp}\n"
+            # hide certain info from players (for now)
+            if not key == "Actions" and not key == "Difficulty" and not key == "Hit Points":
+                boss_info += f"{key}: {value}\n"
         # information to parse for dm:
         # player a and b's positions after they move
 
@@ -999,6 +1042,13 @@ class DnD(GameMaster):
     def new_turn(self) -> None:
 
         # the responses from the previous turn should all be valid
+        if self.boss_hp <= 0:
+            return None
+        # game ends if all adventurers are dead
+        if self.player_a_hp <= 0 and self.player_b_hp <= 0:
+            return None
+        
+        # if none of the abo
 
         _ , reply_a, _ = self._validate_player_response(self.player_a, self.player_a_response[-1])
         _, reply_b, _ = self._validate_player_response(self.player_b, self.player_b_response[-1])
@@ -1011,21 +1061,7 @@ class DnD(GameMaster):
         b_armor = self.player_b_dict["Armor Class"]
         dm_armor = self.boss_dict["Armor Class"]
 
-        #boss hp left
-        total_damage_done = 0 #damage done in this turn
-        if reply_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
-            total_damage_done = total_damage_done + reply_a["Roll"]
 
-        if reply_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
-            total_damage_done = total_damage_done + reply_b["Roll"]
-
-        # the target only takes damage if the damage roll is equal or greater to AC
-        if total_damage_done >= dm_armor:
-            # make sure hp doesn't drop below 0
-            if self.boss_hp - total_damage_done <= 0:
-                self.boss_hp = 0
-            else:
-                self.boss_hp = self.boss_hp - total_damage_done
 
         #player hp left:
         if reply_dm["Action"].startswith("Attack"):
@@ -1156,10 +1192,22 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
+    
+        a_damage_done = 0 #damage done in this turn
+        if reply_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
+            a_damage_done = a_damage_done + reply_a["Roll"]
+
+        if a_damage_done >= dm_armor:
+            # make sure hp doesn't drop below 0
+            if self.boss_hp - a_damage_done <= 0:
+                self.boss_hp = 0
+            else:
+                self.boss_hp = self.boss_hp - a_damage_done
 
         # remember now player A move, so the position is already updated inside _validate_player_response, and this info needs to be passed on:
         a_stats_string = f"Hit Points: {self.player_a_hp}\nPosition: {self.player_a_position}\nSpell slots: {self.player_a_slots}"
-        
+        boss_stats_string = f"Hit Points: {self.boss_hp}\nPosition: {self.boss_position}"
+            
         # make action list for a into a single string:
         action_b_string = "\n"
         for item in self.player_b_dict['Actions']:
@@ -1219,8 +1267,20 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
-        
+
+        b_damage_done = 0 #damage done in this turn
+        if reply_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
+            b_damage_done = b_damage_done + reply_a["Roll"]
+
+        if b_damage_done >= dm_armor:
+            # make sure hp doesn't drop below 0
+            if self.boss_hp - b_damage_done <= 0:
+                self.boss_hp = 0
+            else:
+                self.boss_hp = self.boss_hp - b_damage_done
+
         b_stats_string = f"Hit Points: {self.player_b_hp}\nPosition: {self.player_b_position}\nSpell slots: {self.player_b_slots}"
+        boss_stats_string = f"Hit Points: {self.boss_hp}\nPosition: {self.boss_position}"
 
         action_dm_string = "\n"
         for item in self.boss_dict['Actions']:
