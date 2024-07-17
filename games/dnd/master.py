@@ -409,8 +409,6 @@ class DnD(GameMaster):
         cols = '12345'
 
         # get row & column 
-        print("pos_1: " + pos_1)
-        print("pos_2: " + pos_2)
         row_a, col_a = rows.index(pos_1[0]), cols.index(pos_1[1])
         row_b, col_b = rows.index(pos_2[0]), cols.index(pos_2[1])
 
@@ -499,6 +497,9 @@ class DnD(GameMaster):
             # Melee-only damage dealers
             if player_cls in melee_classes:
                 # if the player COULD attack the boss (is in range) but decides to do nothing
+                print("line 500 pos_1: " + player_pos)
+                print("line 501 pos_2: " + boss_pos)
+                
                 if self._check_move(n=1, pos_1=player_pos, pos_2=boss_pos):
                     return False
             # Players able to deal damage at a distance
@@ -615,17 +616,20 @@ class DnD(GameMaster):
         if roll.isdigit():
             roll = int(roll)
 
-        # is the position inside the grid?
-        rows = 'ABCDE'
-        cols = '12345'
-        row, col = player_move[0], player_move[1]
-
-        if not row in rows and col in cols:
+        grid_pattern = r'^[A-E][1-5]$'
+        if not re.match(grid_pattern, player_move):
             self.invalid_response = True
             error_message = "The position you move to is not inside of the 5*5 grid dungeon. Remember the dungeon is a 5*5 grid, with rows from A-E, and columns from 1-5."
             action = {'type': 'error', 'content': 'invalid move'}
             self.log_event(from_='GM', to='GM', action=action)
             return False, None, error_message
+        if not re.match(grid_pattern, target_pos):
+            self.invalid_response = True
+            error_message = "The target's position is not inside of the 5*5 grid dungeon. Remember the dungeon is a 5*5 grid, with rows from A-E, and columns from 1-5."
+            action = {'type': 'error', 'content': 'invalid move'}
+            self.log_event(from_='GM', to='GM', action=action)
+            return False, None, error_message
+
 
 
         ####### Player cannot move to a cell that is occupied (blocked, or someone is already there.)
@@ -689,6 +693,9 @@ class DnD(GameMaster):
         if not player_move == player_pos:
             # check if the move is allowed based on the player's stamina
             n = player_dict['Stamina']
+            print("line 696 pos_1: " + player_pos)
+            print("line 697 pos_2: " + player_move)
+                
             valid = self._check_move(n, player_pos, player_move)
             if not valid:
                 action = {'type': 'error', 'content': 'invalid move'}
@@ -713,6 +720,8 @@ class DnD(GameMaster):
                     # adjacency condition requires target to be within range (n=1)
                     elif condition == "adjacency":
                         if not target=="self":
+                            print("line 723 pos_1: " + player_move)
+                            print("line 724 pos_2: " + target_pos)
                             if not self._check_move(n=1, pos_1=player_move, pos_2=target_pos):
                             #    self.log_to_self("condition not met")
                                 self.invalid_response = True
@@ -789,9 +798,6 @@ class DnD(GameMaster):
                 self.log_event(from_='GM', to='GM', action=action)
 
         error_message = "No Error"
-        # log a valid move
-        # action = {'type': 'info', 'content': 'valid move'}
-        # self.log_event(from_='GM', to='GM', action=action)
         return True, reply_dict, error_message
 
     def reprompt(self, player, initial_answer, prompt):
@@ -1148,23 +1154,24 @@ class DnD(GameMaster):
                     self.player_b_hp = self.player_b_dict["Hit Points"]
         
         # does player B uses healing action:
-        if "healing" in reply_b["Action"].lower():
-            healing_done = reply_b["Roll"]
-            if "player a" in reply_b["Target"].lower():
-                hp_diff = self.player_a_dict["Hit Points"] - self.player_a_hp
-                if hp_diff >= healing_done:
-                    self.player_a_hp = self.player_a_hp + healing_done
-                if hp_diff < healing_done:
-                    # recover to original health
-                    self.player_a_hp = self.player_a_dict["Hit Points"]
+        if reply_b["Action"] is not None:
+            if "healing" in reply_b["Action"].lower():
+                healing_done = reply_b["Roll"]
+                if "player a" in reply_b["Target"].lower():
+                    hp_diff = self.player_a_dict["Hit Points"] - self.player_a_hp
+                    if hp_diff >= healing_done:
+                        self.player_a_hp = self.player_a_hp + healing_done
+                    if hp_diff < healing_done:
+                        # recover to original health
+                        self.player_a_hp = self.player_a_dict["Hit Points"]
 
-            if "player b" in reply_b["Target"].lower():
-                hp_diff = self.player_b_dict["Hit Points"] - self.player_b_hp
-                if hp_diff >= healing_done:
-                    self.player_b_hp = self.player_b_hp + healing_done
-                if hp_diff < healing_done:
-                    # recover to original health
-                    self.player_b_hp = self.player_b_dict["Hit Points"]
+                if "player b" in reply_b["Target"].lower():
+                    hp_diff = self.player_b_dict["Hit Points"] - self.player_b_hp
+                    if hp_diff >= healing_done:
+                        self.player_b_hp = self.player_b_hp + healing_done
+                    if hp_diff < healing_done:
+                        # recover to original health
+                        self.player_b_hp = self.player_b_dict["Hit Points"]
         
         
         # check if the player uses spell, if so, the spell slots minus 1
@@ -1240,7 +1247,9 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
-    
+        if bol == True:
+            action = {'type': 'info', 'content': 'valid move'}
+            self.log_event(from_='GM', to='GM', action=action)
         a_damage_done = 0 #damage done in this turn
         if reply_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
             a_damage_done = a_damage_done + reply_a["Roll"]
@@ -1325,7 +1334,9 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
-
+        if bol == True:
+            action = {'type': 'info', 'content': 'valid move'}
+            self.log_event(from_='GM', to='GM', action=action)
         b_damage_done = 0 #damage done in this turn
         if reply_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
             b_damage_done = b_damage_done + int(reply_b["Roll"])
@@ -1401,7 +1412,9 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
             self.aborted = True
             return None
-
+        if bol == True:
+            action = {'type': 'info', 'content': 'valid move'}
+            self.log_event(from_='GM', to='GM', action=action)
 
 
     def _append_utterance(self, utterance: str, player: str, role: str) -> None:
