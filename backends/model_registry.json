@@ -8,6 +8,14 @@
     "parameters": "7B"
   },
   {
+    "model_name": "llama-3.1-8b-instruct:free",
+    "model_id": "meta-llama/llama-3.1-8b-instruct:free",
+    "backend": "openai_compatible",
+    "release_date": "23-07-24",
+    "open_weight": true,
+    "parameters": "8B"
+  },
+  {
     "model_name": "codellama-34b",
     "model_id": "codellama-34b-instruct",
     "backend": "openai_compatible",
