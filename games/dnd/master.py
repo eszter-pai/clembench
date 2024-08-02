@@ -44,7 +44,7 @@ class DnD(GameMaster):
 
         logger.info("_on_setup")
 
-        self.do_game_reprompt = True
+        self.do_game_reprompt = False
         self.do_game_guided = True
 
         # initialize players' classes: 
@@ -478,7 +478,8 @@ class DnD(GameMaster):
         # 2. Choosing not to revive a player when able to
         if player_cls == "Cleric":
             if other_adv_hp == 0 and player_slots != 0:
-                return False
+                if not action.lower() == "revivify":
+                    return False
             
         # 3. Choosing to heal when above 70% HP
         max_hp = player_dict["Hit Points"]
@@ -1533,22 +1534,22 @@ class DnDScorer(GameScorer):
         else:
             self.log_episode_score(ms.METRIC_ABORTED, 0)
 
+            #speed & intelligence for bench score
+            speed = 1 - (played_turns / max_turns)  # how fast did they beat the boss?
+            intel = 1 - (bad_moves/valid_moves)   # how many valid but bad moves did they make
+
             # if the adventurers won: compute bench score
             if adventurers_won == True:
                 self.log_episode_score(ms.METRIC_SUCCESS, 1)
                 self.log_episode_score(ms.METRIC_LOSE, 0)
-                print(f"bad moves: {bad_moves}, valid_moves: {valid_moves}")
-                speed = 1 - (played_turns / max_turns)  # how fast did they beat the boss?
-                intel = 1 - (bad_moves/valid_moves)   # how many valid but bad moves did they make?
 
-                print(speed, intel)
-
-                # bench score as harmonic mean of speed & intelligence
-                self.log_episode_score(ms.BENCH_SCORE, scipy.stats.hmean([speed, intel]))  
+                bench_score = (1 * scipy.stats.hmean([speed, intel])) * 100
+                self.log_episode_score(ms.BENCH_SCORE, bench_score)  # success
 
             else:
                 self.log_episode_score(ms.METRIC_SUCCESS, 0)
                 self.log_episode_score(ms.METRIC_LOSE, 1)
+
                 self.log_episode_score(ms.BENCH_SCORE, 0)  # failure
                  
 
