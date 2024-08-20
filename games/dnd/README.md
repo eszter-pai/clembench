@@ -84,3 +84,8 @@ Each player must follow this format during their combat turn:
 
 ![image](https://github.com/user-attachments/assets/c7826dbd-bbdb-4654-815a-01d2d883d3cc)
 
+## Results
+
+## CLI
+
+`python3 scripts/cli.py run -g dnd -m "model_name"`
