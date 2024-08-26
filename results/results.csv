@@ -1,0 +1,6 @@
+,"-, clemscore","all, Average % Played","all, Average Quality Score","dnd-guided-noreprompt, % Played","dnd-guided-noreprompt, Quality Score","dnd-guided-noreprompt, Quality Score (std)","dnd-guided-reprompt, % Played","dnd-guided-reprompt, Quality Score","dnd-guided-reprompt, Quality Score (std)","dnd-unguided-noreprompt, % Played","dnd-unguided-noreprompt, Quality Score","dnd-unguided-noreprompt, Quality Score (std)","dnd-unguided-reprompt, % Played","dnd-unguided-reprompt, Quality Score","dnd-unguided-reprompt, Quality Score (std)"
+Llama-3-70B-Instruct-Anyscale-t0.0--Llama-3-70B-Instruct-Anyscale-t0.0,,0.0,,0.0,,,0.0,,,0.0,,,0.0,,
+Llama-3-8B-Instruct-Anyscale-t0.0--Llama-3-8B-Instruct-Anyscale-t0.0,0.0,0.28,0.0,0.0,,,1.11,0.0,,0.0,,,0.0,,
+Mixtral-8x22B-Instruct-v0.1-t0.0--Mixtral-8x22B-Instruct-v0.1-t0.0,1.99,2.5,79.78,0.0,,,4.44,70.21,21.0,0.0,,,5.56,89.36,8.26
+Mixtral-8x7B-Instruct-v0.1-t0.0--Mixtral-8x7B-Instruct-v0.1-t0.0,,0.0,,0.0,,,0.0,,,0.0,,,0.0,,
+llama-3.1-8b-instruct-free-t0.0--llama-3.1-8b-instruct-free-t0.0,3.05,3.33,91.54,,,,3.33,91.54,4.52,,,,,,

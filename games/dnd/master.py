@@ -44,7 +44,7 @@ class DnD(GameMaster):
 
         logger.info("_on_setup")
 
-        self.do_game_reprompt = False
+        self.do_game_reprompt = True
         self.do_game_guided = True
 
         # initialize players' classes: 
@@ -568,21 +568,27 @@ class DnD(GameMaster):
             key, value = line.split(': ', 1)
             response_dic[key] = value.rstrip()      # RONJA'S NOTE: maybe this will help current parsing issues
 
-        if not response_dic["ACTION"].lower() == "do nothing":
+        act_dice_roll = ""
+        for act_dic in player_dict["Actions"]:
+            if act_dic["Name"] == response_dic["ACTION"].rstrip():
+                print(act_dic)
 
-            act_dice_roll = ""
-            for act_dic in player_dict["Actions"]:
-                if act_dic["Name"] == response_dic["ACTION"].rstrip():
-                    print(act_dic)
+                    # there may be actions that have no dice (for example, "do nothing")
+                if "Dice" not in act_dic:
+                    act_dice_roll = "None"
+                else:
                     act_dice_roll = act_dice_roll + act_dic["Dice"]
-            
-            if act_dice_roll == "":
-                self.invalid_response = True
-                action = {'type': 'error', 'content': 'invalid action'}
-                self.log_event(from_='GM', to='GM', action=action)
-                error_message = "The ACTION you picked is not one of the action options, please select the action from the options we give you."
-                return False, None, error_message            
 
+        # if the action couldn't be found in the class dictionary   
+        if act_dice_roll == "":
+            self.invalid_response = True
+            action = {'type': 'error', 'content': 'invalid action'}
+            self.log_event(from_='GM', to='GM', action=action)
+            error_message = "The ACTION you picked is not one of the action options, please select the action from the options we give you."
+            return False, None, error_message            
+
+        # if the dice were determined, check roll validity
+        if not (act_dice_roll == "None" or act_dice_roll == ""):
             dice_min = int(act_dice_roll[0])
             dice_num = int(act_dice_roll[-1])
             dice_max = dice_min * dice_num
@@ -591,7 +597,6 @@ class DnD(GameMaster):
             if response_dic["ROLL"].isdigit():
                 response_roll = int(response_dic["ROLL"])
             else:
-
                 self.invalid_response = True
                 action = {'type': 'error', 'content': 'invalid format'}
                 self.log_event(from_='GM', to='GM', action=action)
@@ -936,7 +941,8 @@ class DnD(GameMaster):
         dm_armor = self.boss_dict["Armor Class"]
         a_damage_done = 0 #damage done in this turn
         if reply_dict_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
-            a_damage_done = a_damage_done + reply_dict_a["Roll"]
+            if not reply_dict_a["Roll"] == "None":
+                a_damage_done = a_damage_done + reply_dict_a["Roll"]
 
         # get the type of the action, and see if it matches the boss resistance 
         act_type_a = ""
@@ -1020,7 +1026,8 @@ class DnD(GameMaster):
 
         b_damage_done = 0 #damage done in this turn
         if reply_dict_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
-            b_damage_done = b_damage_done + reply_dict_b["Roll"]
+            if not reply_dict_b["Roll"] == "None":
+                b_damage_done = b_damage_done + reply_dict_b["Roll"]
 
         act_type_b = ""
         for act in self.player_b_dict["Actions"]:
@@ -1535,7 +1542,7 @@ class DnDScorer(GameScorer):
             self.log_episode_score(ms.METRIC_ABORTED, 0)
 
             #speed & intelligence for bench score
-            speed = 1 - (played_turns / max_turns)  # how fast did they beat the boss?
+            speed = 1 - ((played_turns - 2) / (max_turns - 2))  # how fast did they beat the boss?
             intel = 1 - (bad_moves/valid_moves)   # how many valid but bad moves did they make
 
             # if the adventurers won: compute bench score
@@ -1550,7 +1557,8 @@ class DnDScorer(GameScorer):
                 self.log_episode_score(ms.METRIC_SUCCESS, 0)
                 self.log_episode_score(ms.METRIC_LOSE, 1)
 
-                self.log_episode_score(ms.BENCH_SCORE, 0)  # failure
+                bench_score = (0 * scipy.stats.hmean([speed, intel])) * 100
+                self.log_episode_score(ms.BENCH_SCORE, bench_score)  # failure
                  
 
 # always add the GameBenchmark child with this structure
