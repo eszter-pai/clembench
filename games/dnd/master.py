@@ -56,8 +56,6 @@ class DnD(GameMaster):
         # instantiate players
         self.player_a = Adventurer(self.model_a, "A", player_a_class)
         self.player_b = Adventurer(self.model_b, "B", player_B_class)
-        #self.player_a = Adventurer(self.model_a, "A", "Fighter")
-        #self.player_b = Adventurer(self.model_b, "B", "Fighter")
         self.player_dm = DungeonMaster(self.model_dm, "DM", player_dm_monster)
 
         # all classes/boss of each player: self.player_a.clss | self.player_b.clss | self.player_dm.clss
@@ -80,8 +78,7 @@ class DnD(GameMaster):
         # initialize game variable
         self.current_turn: int = 0
         # the potions are shared among the heroes
-        self.potions = 5    # RONJA'S NOTE: i think 7 is a bit much .. 
-                            # maybe we should tie them to difficulty / instance?
+        self.potions = 5 
 
         # keep player's dicts & response format dict to access later
         self.player_a_dict = game_instance['player_a_dict']
@@ -102,13 +99,9 @@ class DnD(GameMaster):
         dungeon = Dungeon()
         dungeon.generate_dungeon()
         self.player_a_position = dungeon.player_a_position
-        # self.player_a_position = "A1"
         self.player_b_position = dungeon.player_b_position
-        # self.player_b_position = "B1"
         self.boss_position = dungeon.player_dm_position
-        # self.boss_position = "A3"
         self.blocked_cells  = dungeon.cells_blocked
-        # self.blocked_cells = "A5, C4"
 
         # initialise common metrics
         self.request_counts = [0] * (self.max_turns + 1)
@@ -322,14 +315,6 @@ class DnD(GameMaster):
 
     def does_game_proceed(self) -> None:
 
-        # does the game continue
-    #    if self.current_turn > self.max_turns: # if max turns reached 
-    #        self.log_to_self("max turns reached", str(self.max_turns))
-    #        return False
-    #    if self.invalid_response:               # if invalid response - reprompt??
-    #        self.log_to_self("invalid response", "abort game")
-    #        return False
-
         if not self.aborted:
             # game ends if max turns reached
             if self.current_turn > self.max_turns:
@@ -498,8 +483,6 @@ class DnD(GameMaster):
             # Melee-only damage dealers
             if player_cls in melee_classes:
                 # if the player COULD attack the boss (is in range) but decides to do nothing
-                print("line 500 pos_1: " + player_pos)
-                print("line 501 pos_2: " + boss_pos)
                 
                 if self._check_move(n=1, pos_1=player_pos, pos_2=boss_pos):
                     return False
@@ -571,8 +554,6 @@ class DnD(GameMaster):
         act_dice_roll = ""
         for act_dic in player_dict["Actions"]:
             if act_dic["Name"] == response_dic["ACTION"].rstrip():
-                print(act_dic)
-
                     # there may be actions that have no dice (for example, "do nothing")
                 if "Dice" not in act_dic:
                     act_dice_roll = "None"
@@ -603,7 +584,7 @@ class DnD(GameMaster):
                 error_message = "Incorrect Dice Roll. Please respond with only the sum of your dice roll result.\n For example, if your chosen action has “Dice: 3d4”, and you roll 3, 4, and 4, then your dice roll result is 11. So your response is ROLL: 11\n"
                 return False, None, error_message
 
-            #is the sum of the dice roll is possible?
+            #is the sum of the dice roll possible?
             if response_roll not in range(dice_min, dice_max + 1):
                 self.invalid_response = True
                 action = {'type': 'error', 'content': 'invalid roll'}
@@ -699,9 +680,6 @@ class DnD(GameMaster):
         if not player_move == player_pos:
             # check if the move is allowed based on the player's stamina
             n = player_dict['Stamina']
-            print("line 696 pos_1: " + player_pos)
-            print("line 697 pos_2: " + player_move)
-                
             valid = self._check_move(n, player_pos, player_move)
             if not valid:
                 action = {'type': 'error', 'content': 'invalid move'}
@@ -726,8 +704,6 @@ class DnD(GameMaster):
                     # adjacency condition requires target to be within range (n=1)
                     elif condition == "adjacency":
                         if not target=="self":
-                            print("line 723 pos_1: " + player_move)
-                            print("line 724 pos_2: " + target_pos)
                             if not self._check_move(n=1, pos_1=player_move, pos_2=target_pos):
                             #    self.log_to_self("condition not met")
                                 self.invalid_response = True
@@ -779,6 +755,7 @@ class DnD(GameMaster):
                     self.potions = self.potions - 1     # remove potion if use was valid 
             else:
                 self.potions = self.potions - 1
+
         # if nothing was False until now, return LLM's reply to feed into next prompt
         # and update player position in the dungeon 
 
@@ -891,7 +868,7 @@ class DnD(GameMaster):
             if not key == "Actions" and not key == "Difficulty":
                 boss_info += f"{key}: {value}\n"
 
-        if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
+        if self.player_a.clss != "Fighter" and self.player_a.clss != "Rogue":
             add_info_a = f"You and Player B have {self.potions} Potions in total, and you can use your 'Spell' for {self.player_a_slots} times.\n"
         else:
             add_info_a = f"You and Player B have {self.potions} Potions in total.\n"
@@ -980,7 +957,7 @@ class DnD(GameMaster):
             action_b_string += ".....\n"        
 
 
-        if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
+        if self.player_b.clss != "Fighter" and self.player_b.clss != "Rogue":
             add_info_b = f"You and Player A have {self.potions} Potions in total, and you can use your 'Spell' for {self.player_b_slots} times.\n"
         else:
             add_info_b = f"You and Player A have {self.potions} Potions in total.\n"        
@@ -1025,7 +1002,7 @@ class DnD(GameMaster):
             self.log_event(from_='GM', to='GM', action=action)
 
         b_damage_done = 0 #damage done in this turn
-        if reply_dict_a["Action"].startswith(("Spell", "Attack", "Cantrip")):
+        if reply_dict_b["Action"].startswith(("Spell", "Attack", "Cantrip")):
             if not reply_dict_b["Roll"] == "None":
                 b_damage_done = b_damage_done + reply_dict_b["Roll"]
 
@@ -1043,9 +1020,9 @@ class DnD(GameMaster):
                 self.boss_hp = 0
             else:
                 self.boss_hp = self.boss_hp - b_damage_done
-
         if self.boss_hp <= 0:
             return None
+        
         # update boss info to give players
         boss_info = f"Position: {self.boss_position}\n"
         for key, value in self.boss_dict.items():
@@ -1054,9 +1031,9 @@ class DnD(GameMaster):
             # hide certain info from players (for now)
             if not key == "Actions" and not key == "Difficulty" and not key == "Hit Points":
                 boss_info += f"{key}: {value}\n"
+
         # information to parse for dm:
         # player a and b's positions after they move
-
 
         action_dm_string = "\n"
         for item in self.boss_dict['Actions']:
@@ -1141,8 +1118,10 @@ class DnD(GameMaster):
                     self.player_b_hp = self.player_b_hp - reply_dm["Roll"]
 
         # if anyone's action belongs to the type: healing ex. healing spells or potions on a target.
-        # no over-heal, that is, if someone roll heal 10 on a target, and the target health is 43/46, then the target's hp is back to 46/46
-        # does player A uses healing action:
+        # no over-heal, that is, if someone roll heal 10 on a target, and the target health is 43/46, 
+        # then the target's hp is back to 46/46
+
+        # does player A use healing action:
         if "healing" in reply_a["Action"].lower():
             healing_done = reply_a["Roll"]
             if "player a" in reply_a["Target"].lower():
@@ -1161,7 +1140,7 @@ class DnD(GameMaster):
                     # recover to original health
                     self.player_b_hp = self.player_b_dict["Hit Points"]
         
-        # does player B uses healing action:
+        # does player B use healing action:
         if reply_b["Action"] is not None:
             if "healing" in reply_b["Action"].lower():
                 healing_done = reply_b["Roll"]
@@ -1200,11 +1179,8 @@ class DnD(GameMaster):
             action_a_string += ".....\n"
         
 
-        # NOTE: if unguided, use this line:
-        # add_info_a = "" 
-        # NOTE: if guided, use these 4 lines:
         if self.do_game_guided:
-            if self.player_a.clss != "Fighter" and self.player_a.clss != "Rouge":
+            if self.player_a.clss != "Fighter" and self.player_a.clss != "Rogue":
                 add_info_a = f"You and Player B have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_a_slots} times.\n"
             else:
                 add_info_a = f"You and Player B have {self.potions} Potions in left.\n"  
@@ -1279,7 +1255,9 @@ class DnD(GameMaster):
                 self.boss_hp = self.boss_hp - a_damage_done
         if self.boss_hp <= 0:
             return None
-        # remember now player A move, so the position is already updated inside _validate_player_response, and this info needs to be passed on:
+        
+        # remember now player A move, so the position is already updated inside _validate_player_response, 
+        # and this info needs to be passed on:
         a_stats_string = f"Hit Points: {self.player_a_hp}\nPosition: {self.player_a_position}\nSpell slots: {self.player_a_slots}"
         boss_stats_string = f"Hit Points: {self.boss_hp}\nPosition: {self.boss_position}"
             
@@ -1292,7 +1270,7 @@ class DnD(GameMaster):
         
 
         if self.do_game_guided:
-            if self.player_b.clss != "Fighter" and self.player_b.clss != "Rouge":
+            if self.player_b.clss != "Fighter" and self.player_b.clss != "Rogue":
                 add_info_b = f"You and Player A have {self.potions} Potions left, and you can still use your 'Spell' for {self.player_b_slots} times.\n"
             else:
                 add_info_b = f"You and Player A have {self.potions} Potions in left.\n"  
@@ -1330,7 +1308,8 @@ class DnD(GameMaster):
 
         answer_b = self.get_utterance('b')
 
-        # remember now player B move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
+        # remember now player B move, so the position is updated inside _validate_player_response, 
+        # and this info needs to be passed on:
         if self.do_game_reprompt:
             bol, reply_b, error_message = self.reprompt(self.player_b, answer_b, newturn_prompt_b)
         else:
@@ -1365,6 +1344,7 @@ class DnD(GameMaster):
                 self.boss_hp = self.boss_hp - b_damage_done
         if self.boss_hp <= 0:
             return None
+        
         b_stats_string = f"Hit Points: {self.player_b_hp}\nPosition: {self.player_b_position}\nSpell slots: {self.player_b_slots}"
         boss_stats_string = f"Hit Points: {self.boss_hp}\nPosition: {self.boss_position}"
 
@@ -1407,7 +1387,8 @@ class DnD(GameMaster):
 
         answer_dm = self.get_utterance('dm')
 
-        # remember now player DM move, so the position is updated inside _validate_player_response, and this info needs to be passed on:
+        # remember now player DM move, so the position is updated inside _validate_player_response, 
+        # and this info needs to be passed on:
         if self.do_game_reprompt:
             bol, reply_dm, error_message = self.reprompt(self.player_dm, answer_dm, newturn_prompt_dm)    
         else:
