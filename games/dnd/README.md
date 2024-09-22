@@ -87,7 +87,17 @@ Each player must follow this format during their combat turn:
 ## Results
 
 Results can be found in the `results` directory of the main branch. We ran all 4 game modes on 4 different cLLMs, and additionally ran llama-3.1-8b on guided-reprompt. Files are named by mode; in order to run evaluation, results directories must be renamed 'dnd'. 
+For the plots of the evaluation. Please refer to dnd/result-plots directory
 
+| Models                | Average % Played in | Average Quality Score | dnd-guided-reprompt, Quality Score | dnd-guided-reprompt, Quality Score (std) |
+|-----------------------|---------------------|-----------------------|------------------------------------|------------------------------------------|
+| Llama-3-70B-Instruct   | 0.00                | NaN                   | NaN                                | NaN                                      |
+| Llama-3-8B-Instruct    | 0.28                | 0.00                  | 0.00                               | NaN                                      |
+| Mixtral-8x22B-Instruct | 2.50                | 79.78                 | 70.21                              | 21.00                                    |
+| Mixtral-8x7B-Instruct  | 0.00                | NaN                   | NaN                                | NaN                                      |
+| Llama-3.1-8b-Instruct  | 3.33                | 91.54                 | 91.54                              | 4.52                                     |
+
+The table is a subsect of the generated table via clembench scorer. It includes performance metrics for different models, including the percentage of usage, quality scores, and standard deviations. Notably, Llama-3.1-8b-Instruct stands out with the highest quality score (91.54) and a moderate usage rate of 3.33%.
 ## CLI
 
 `python3 scripts/cli.py run -g dnd -m "model_name"`
