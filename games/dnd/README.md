@@ -84,6 +84,8 @@ Each player must follow this format during their combat turn:
 
 ![image](https://github.com/user-attachments/assets/c7826dbd-bbdb-4654-815a-01d2d883d3cc)
 
+Transcripts folder for 4 models under the same condition (hard and guided with 2 wizards) are in the folder `transcripts_2wizards_hard_guided`
+
 ## Results
 
 Results can be found in the `results` directory of the main branch. We ran all 4 game modes on 4 different cLLMs, and additionally ran llama-3.1-8b on guided-reprompt. Files are named by mode; in order to run evaluation, results directories must be renamed 'dnd'. 
