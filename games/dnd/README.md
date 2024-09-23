@@ -84,7 +84,7 @@ Each player must follow this format during their combat turn:
 
 ![image](https://github.com/user-attachments/assets/c7826dbd-bbdb-4654-815a-01d2d883d3cc)
 
-Transcripts folder for 4 models under the same condition (hard and guided with 2 wizards) are in the folder `transcripts_2wizards_hard_guided`
+Examples of full transcripts for 4 models under the same condition (hard and guided with 2 wizards) are in the folder `transcripts_2wizards_hard_guided`
 
 ## Results
 
